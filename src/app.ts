@@ -1,5 +1,6 @@
 import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 import config from './config/index.js';
 import { uptime } from 'process';
@@ -16,6 +17,7 @@ app.use(cors({
 //parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 
 app.get('/', (req: Request, res: Response) => {
@@ -28,7 +30,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // ─── API ROUTES ──────────────────────────────────────────────────────
-app.use('/api/auth', UserRoutes);
+app.use('/api/v1', UserRoutes);
 
 
 

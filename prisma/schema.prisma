@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,10 +8,116 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  name      String?
-  role      String   @default("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  email            String   @unique
+  password         String   // Hashed
+  profileFor       String
+  fullName         String
+  isEmailVerified  Boolean  @default(false)
+  verificationOtp  String?
+  verificationOtpExpires DateTime?
+  
+  // Role & Monetization
+  role             Role     @default(USER) // e.g., USER, ADMIN
+  connections      Int      @default(0)    // Wallet balance
+  
+  // Progress tracking
+  onboardingStep   Int      @default(1)
+
+  // System Flags
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // --- Profile Data Relation ---
+  profile          Profile?
+  
+  // --- Relational Records ---
+  unlockedProfiles ContactUnlock[] @relation("UnlockedBy")
+  unlockedByOthers ContactUnlock[] @relation("TargetProfile")
+}
+
+model Profile {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @unique @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // --- Phase 1: Guardian / Contact Info (LOCKED FROM PUBLIC) ---
+  guardianName     String?
+  guardianRelation String?
+  guardianMobile   String?  // THIS IS THE PAYWALLED DATA
+  guardianEmail    String?  // THIS IS THE PAYWALLED DATA
+
+  // --- Phase 2: Basic Identity ---
+  religion         String?
+  sect             String?
+  motherTongue     String?
+  dob              DateTime? // Stored as ISODate
+  maritalStatus    String?
+  height           String?
+  physicalStatus   String?
+
+  // --- Phase 3: Location & Profession ---
+  country          String?
+  state            String?
+  citizenship      String?
+  highestEducation String?
+  employedIn       String?
+  occupation       String?
+  annualIncome     String?
+  bio              String?
+
+  // --- Phase 4: Portraits ---
+  // Stored as an array of uploaded image URLs (e.g., Cloudinary/AWS)
+  photos           String[] @default([])
+
+  // --- Phase 5: Lifestyle & Lineage ---
+  weight           String?
+  bodyType         String?
+  nativePlace      String?
+  fatherOccupation String?
+  motherOccupation String?
+  brothers         String?
+  familyBio        String?
+  eatingHabits     String?
+  drinkingHabits   String?
+  smokingHabits    String?
+
+  // --- Phase 6: Partner Preferences ---
+  partnerAgeMin        Int?
+  partnerAgeMax        Int?
+  partnerHeightMin     String?
+  partnerHeightMax     String?
+  partnerMaritalStatus String[] @default([])
+  partnerReligions     String[] @default([])
+  partnerEducation     String?
+  partnerBio           String?
+
+  // --- Phase 7: Security / NID (Visible only to Admins) ---
+  nidFront         String?
+  nidBack          String?
+  isNidVerified    Boolean @default(false)
+}
+
+// Tracks which user spent a connection to unlock whose guardian details
+model ContactUnlock {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // The user who spent the connection
+  unlockedById     String   @db.ObjectId
+  unlockedBy       User     @relation("UnlockedBy", fields: [unlockedById], references: [id])
+
+  // The profile they unlocked
+  targetUserId     String   @db.ObjectId
+  targetUser       User     @relation("TargetProfile", fields: [targetUserId], references: [id])
+
+  unlockedAt       DateTime @default(now())
+
+  // A composite unique constraint ensures a user can only unlock a profile once
+  @@unique([unlockedById, targetUserId])
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
 }

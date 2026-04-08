@@ -1,0 +1,11 @@
+import { Request, Response } from 'express';
+export declare const UserController: {
+    loginUser: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    registerUser: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    verifyEmail: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    resendOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    updateProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    getProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    unlockContact: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    buyConnections: (req: Request, res: Response, next: import("express").NextFunction) => void;
+};

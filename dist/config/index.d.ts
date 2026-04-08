@@ -4,5 +4,9 @@ declare const _default: {
     database_url: string | undefined;
     jwt_secret: string | undefined;
     jwt_expires_in: string | undefined;
+    email_host: string | undefined;
+    email_port: string | undefined;
+    email_user: string | undefined;
+    email_pass: string | undefined;
 };
 export default _default;
