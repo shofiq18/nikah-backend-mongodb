@@ -91,12 +91,30 @@ const verifyEmail = async (email: string, otp: string) => {
     data: { 
       isEmailVerified: true,
       onboardingStep: 2,
-      verificationOtp: null, // Clear OTP after success
+      verificationOtp: null,
       verificationOtpExpires: null
     },
   });
 
-  return updatedUser;
+  const jwtPayload = {
+    email: updatedUser.email,
+    id: updatedUser.id,
+    role: updatedUser.role
+  };
+
+  const accessToken = jwt.sign(jwtPayload, config.jwt_secret as string, {
+    expiresIn: config.jwt_expires_in as any
+  });
+
+  return {
+    accessToken,
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      role: updatedUser.role
+    }
+  };
 };
 
 const loginUser = async (payload: TLoginUser) => {

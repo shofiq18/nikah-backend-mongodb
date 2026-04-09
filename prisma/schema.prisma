@@ -77,10 +77,17 @@ model Profile {
   fatherOccupation String?
   motherOccupation String?
   brothers         String?
+  brothersMarried  String?
+  sisters          String?
+  sistersMarried   String?
   familyBio        String?
   eatingHabits     String?
   drinkingHabits   String?
   smokingHabits    String?
+  interests        String[] @default([])
+  favMusic         String[] @default([])
+  favSports        String[] @default([])
+  favFood          String[] @default([])
 
   // --- Phase 6: Partner Preferences ---
   partnerAgeMin        Int?

@@ -9,7 +9,7 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.registerUser(req.body);
   const { accessToken, user } = result;
 
-  res.cookie('accessToken', accessToken, {
+  res.cookie('token', accessToken, {
     secure: config.node_env === 'production',
     httpOnly: true,
   });
@@ -29,7 +29,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.loginUser(req.body);
   const { accessToken, user } = result;
 
-  res.cookie('accessToken', accessToken, {
+  res.cookie('token', accessToken, {
     secure: config.node_env === 'production',
     httpOnly: true,
   });
@@ -45,12 +45,43 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const updateProfile = catchAsync(async (req: Request, res: Response) => {
-  // Assuming req.user is set by auth middleware
-  // We'll use a mocked userId if req.user is not available for now
-  const userId = (req as any).user?.id || req.body.userId; // Usually req.user.id
+import { uploadToCloudinary } from '../../utils/cloudinary.js';
 
-  const result = await UserService.updateProfile(userId, req.body);
+const updateProfile = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || req.body.userId;
+
+  if (!userId) {
+    throw new Error('User ID is required for profile update');
+  }
+
+  // Create a copy of the body and remove userId to avoid Prisma updating the relation field
+  const updateData = { ...req.body };
+  delete updateData.userId;
+
+  // Handle Photos upload if present
+  if (updateData.photos && Array.isArray(updateData.photos)) {
+    const uploadedPhotos = await Promise.all(
+      updateData.photos.map(async (photo: string) => {
+        if (photo.startsWith('data:image/')) {
+          return await uploadToCloudinary(photo, `${userId}/portraits`);
+        }
+        return photo;
+      })
+    );
+    updateData.photos = uploadedPhotos;
+  }
+
+  // Handle NID Front upload if present
+  if (updateData.nidFront && updateData.nidFront.startsWith('data:image/')) {
+    updateData.nidFront = await uploadToCloudinary(updateData.nidFront, `${userId}/security`);
+  }
+
+  // Handle NID Back upload if present
+  if (updateData.nidBack && updateData.nidBack.startsWith('data:image/')) {
+    updateData.nidBack = await uploadToCloudinary(updateData.nidBack, `${userId}/security`);
+  }
+
+  const result = await UserService.updateProfile(userId, updateData);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
