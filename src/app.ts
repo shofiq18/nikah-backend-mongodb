@@ -10,7 +10,8 @@ import notFound from './app/middlewares/notFound.js';
 import { UserRoutes } from './app/modules/user/user.route.js';
 const app: Application = express();
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: 'https://nikahbd.vercel.app/',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 }));
 
