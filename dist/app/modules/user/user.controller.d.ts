@@ -6,6 +6,7 @@ export declare const UserController: {
     resendOtp: (req: Request, res: Response, next: import("express").NextFunction) => void;
     updateProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
     getProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    getAllUserProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
     unlockContact: (req: Request, res: Response, next: import("express").NextFunction) => void;
     buyConnections: (req: Request, res: Response, next: import("express").NextFunction) => void;
 };

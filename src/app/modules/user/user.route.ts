@@ -40,6 +40,7 @@ router.post(
   UserController.buyConnections
 );
 
+router.get('/users/profiles', UserController.getAllUserProfiles);
 router.get('/users/:id/profile', UserController.getProfile);
 router.post('/users/:id/unlock', UserController.unlockContact);
 

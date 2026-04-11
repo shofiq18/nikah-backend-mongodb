@@ -9,6 +9,7 @@ router.post('/auth/verify-email', validateRequest(UserValidation.verifyEmailVali
 router.post('/auth/resend-otp', UserController.resendOtp);
 router.patch('/users/profile', validateRequest(UserValidation.updateProfileValidationSchema), UserController.updateProfile);
 router.post('/connections/buy', validateRequest(UserValidation.buyConnectionsValidationSchema), UserController.buyConnections);
+router.get('/users/profiles', UserController.getAllUserProfiles);
 router.get('/users/:id/profile', UserController.getProfile);
 router.post('/users/:id/unlock', UserController.unlockContact);
 export const UserRoutes = router;

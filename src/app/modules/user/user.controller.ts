@@ -159,6 +159,17 @@ const resendOtp = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllUserProfiles = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUserProfiles(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User profiles fetched successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   loginUser,
   registerUser,
@@ -166,6 +177,7 @@ export const UserController = {
   resendOtp,
   updateProfile,
   getProfile,
+  getAllUserProfiles,
   unlockContact,
   buyConnections
 };

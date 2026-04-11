@@ -12,6 +12,7 @@ export declare const UserValidation: {
             fullName: z.ZodString;
             email: z.ZodString;
             password: z.ZodString;
+            gender: z.ZodString;
         }, z.core.$strip>;
     }, z.core.$strip>;
     verifyEmailValidationSchema: z.ZodObject<{
@@ -38,6 +39,9 @@ export declare const UserValidation: {
             height: z.ZodString;
             physicalStatus: z.ZodOptional<z.ZodString>;
             country: z.ZodString;
+            division: z.ZodOptional<z.ZodString>;
+            district: z.ZodOptional<z.ZodString>;
+            subDistrict: z.ZodOptional<z.ZodString>;
             state: z.ZodString;
             citizenship: z.ZodOptional<z.ZodString>;
             highestEducation: z.ZodString;
@@ -98,6 +102,10 @@ export declare const UserValidation: {
     }, z.core.$strip>;
     updateProfileValidationSchema: z.ZodObject<{
         body: z.ZodObject<{
+            gender: z.ZodOptional<z.ZodString>;
+            division: z.ZodOptional<z.ZodString>;
+            district: z.ZodOptional<z.ZodString>;
+            subDistrict: z.ZodOptional<z.ZodString>;
             guardianName: z.ZodOptional<z.ZodString>;
             guardianRelation: z.ZodOptional<z.ZodString>;
             guardianMobile: z.ZodOptional<z.ZodString>;

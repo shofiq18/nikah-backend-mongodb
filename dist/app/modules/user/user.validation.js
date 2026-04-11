@@ -11,6 +11,7 @@ const registerValidationSchema = z.object({
         fullName: z.string().min(1, "Full Name is required"),
         email: z.string().email(),
         password: z.string().min(6, "Password must be at least 6 characters"),
+        gender: z.string().min(1, "Gender is required"),
     })
 });
 const verifyEmailValidationSchema = z.object({
@@ -37,6 +38,9 @@ const step4BasicProfileSchema = z.object({
         height: z.string().min(1, "Height is required"),
         physicalStatus: z.string().optional(),
         country: z.string().min(1, "Country is required"),
+        division: z.string().optional(),
+        district: z.string().optional(),
+        subDistrict: z.string().optional(),
         state: z.string().min(1, "State is required"),
         citizenship: z.string().optional(),
         highestEducation: z.string().min(1, "Highest Education is required"),
@@ -97,6 +101,10 @@ const buyConnectionsValidationSchema = z.object({
 });
 const updateProfileValidationSchema = z.object({
     body: z.object({
+        gender: z.string().optional(),
+        division: z.string().optional(),
+        district: z.string().optional(),
+        subDistrict: z.string().optional(),
         guardianName: z.string().optional(),
         guardianRelation: z.string().optional(),
         guardianMobile: z.string().optional(),

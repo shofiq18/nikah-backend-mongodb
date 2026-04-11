@@ -10,9 +10,14 @@ export type TRegisterUser = {
   password?: string;
   profileFor: string;
   fullName: string;
+  gender: string; // Sex
 };
 
 export type TUpdateProfile = {
+  gender?: string;
+  division?: string;
+  district?: string;
+  subDistrict?: string;
   guardianName?: string;
   guardianRelation?: string;
   guardianMobile?: string;

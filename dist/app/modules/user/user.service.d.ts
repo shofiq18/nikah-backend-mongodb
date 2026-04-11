@@ -32,6 +32,7 @@ export declare const UserService: {
         guardianRelation: string | null;
         guardianMobile: string | null;
         guardianEmail: string | null;
+        gender: string | null;
         religion: string | null;
         sect: string | null;
         motherTongue: string | null;
@@ -40,6 +41,9 @@ export declare const UserService: {
         height: string | null;
         physicalStatus: string | null;
         country: string | null;
+        division: string | null;
+        district: string | null;
+        subDistrict: string | null;
         state: string | null;
         citizenship: string | null;
         highestEducation: string | null;
@@ -83,6 +87,7 @@ export declare const UserService: {
             userId: string;
             guardianName: string | null;
             guardianRelation: string | null;
+            gender: string | null;
             religion: string | null;
             sect: string | null;
             motherTongue: string | null;
@@ -91,6 +96,9 @@ export declare const UserService: {
             height: string | null;
             physicalStatus: string | null;
             country: string | null;
+            division: string | null;
+            district: string | null;
+            subDistrict: string | null;
             state: string | null;
             citizenship: string | null;
             highestEducation: string | null;
@@ -129,6 +137,14 @@ export declare const UserService: {
             isNidVerified: boolean;
         };
         isUnlocked: boolean;
+    }>;
+    getAllUserProfiles: (query: Record<string, any>) => Promise<{
+        meta: {
+            page: number;
+            limit: number;
+            total: any;
+        };
+        data: any;
     }>;
     unlockContact: (requesterId: string, targetUserId: string) => Promise<{
         id: string;

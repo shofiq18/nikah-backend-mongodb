@@ -48,6 +48,7 @@ model Profile {
   guardianEmail    String?  // THIS IS THE PAYWALLED DATA
 
   // --- Phase 2: Basic Identity ---
+  gender           String?
   religion         String?
   sect             String?
   motherTongue     String?
@@ -58,6 +59,9 @@ model Profile {
 
   // --- Phase 3: Location & Profession ---
   country          String?
+  division         String?
+  district         String?
+  subDistrict      String?
   state            String?
   citizenship      String?
   highestEducation String?

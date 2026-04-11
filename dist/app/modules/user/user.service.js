@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import config from '../../../config/index.js';
 import { sendEmail } from '../../utils/sendEmail.js';
+import { QueryHelpers } from '../../utils/queryHelpers.js';
 const prisma = new PrismaClient();
 const registerUser = async (payload) => {
     const hashedPassword = payload.password ? await bcrypt.hash(payload.password, 12) : '';
@@ -17,7 +18,9 @@ const registerUser = async (payload) => {
             verificationOtp: otp,
             verificationOtpExpires: otpExpires,
             profile: {
-                create: {}
+                create: {
+                    gender: payload.gender
+                }
             }
         },
         include: {
@@ -204,6 +207,77 @@ const resendOtp = async (email) => {
     </div>`);
     return { message: 'OTP resent successfully' };
 };
+const getAllUserProfiles = async (query) => {
+    const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
+    const { maritalStatus, gender, country, division, district, subDistrict, minAge, maxAge, highestEducation, religion, profileFor, searchTerm } = query;
+    const where = {};
+    if (profileFor)
+        where.profileFor = profileFor;
+    if (searchTerm) {
+        where.OR = [
+            { fullName: { contains: searchTerm, mode: 'insensitive' } },
+            { email: { contains: searchTerm, mode: 'insensitive' } },
+        ];
+    }
+    const profileFilters = {};
+    if (gender)
+        profileFilters.gender = gender;
+    if (maritalStatus)
+        profileFilters.maritalStatus = maritalStatus;
+    if (country)
+        profileFilters.country = country;
+    if (division)
+        profileFilters.division = division;
+    if (district)
+        profileFilters.district = district;
+    if (subDistrict)
+        profileFilters.subDistrict = subDistrict;
+    if (highestEducation)
+        profileFilters.highestEducation = highestEducation;
+    if (religion)
+        profileFilters.religion = religion;
+    if (minAge || maxAge) {
+        const now = new Date();
+        const maxDob = minAge ? new Date(now.getFullYear() - Number(minAge), now.getMonth(), now.getDate()) : undefined;
+        const minDob = maxAge ? new Date(now.getFullYear() - Number(maxAge) - 1, now.getMonth(), now.getDate()) : undefined;
+        profileFilters.dob = {};
+        if (minDob)
+            profileFilters.dob.gte = minDob;
+        if (maxDob)
+            profileFilters.dob.lte = maxDob;
+    }
+    if (Object.keys(profileFilters).length > 0) {
+        where.profile = profileFilters;
+    }
+    const result = await prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+            profile: true,
+        },
+        orderBy: {
+            [sortBy]: sortOrder,
+        },
+    });
+    const total = await prisma.user.count({ where });
+    const users = result.map((user) => {
+        const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+        if (userWithoutSensitiveData.profile) {
+            const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+            userWithoutSensitiveData.profile = publicProfile;
+        }
+        return userWithoutSensitiveData;
+    });
+    return {
+        meta: {
+            page,
+            limit,
+            total,
+        },
+        data: users,
+    };
+};
 export const UserService = {
     loginUser,
     registerUser,
@@ -211,6 +285,7 @@ export const UserService = {
     resendOtp,
     updateProfile,
     getProfile,
+    getAllUserProfiles,
     unlockContact,
     buyConnections
 };
