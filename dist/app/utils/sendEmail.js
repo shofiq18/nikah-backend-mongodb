@@ -11,7 +11,7 @@ export const sendEmail = async (to, html) => {
         },
     });
     await transporter.sendMail({
-        from: '"NikahBD" <noreply@nikahbd.com>',
+        from: `"NikahBD" <${config.email_user}>`,
         to,
         subject: 'Verification OTP for NikahBD',
         text: 'Please verify your email using the OTP provided.',

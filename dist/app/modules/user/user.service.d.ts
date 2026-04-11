@@ -13,7 +13,15 @@ export declare const UserService: {
         accessToken: string;
         user: any;
     }>;
-    verifyEmail: (email: string, otp: string) => Promise<any>;
+    verifyEmail: (email: string, otp: string) => Promise<{
+        accessToken: string;
+        user: {
+            id: any;
+            email: any;
+            fullName: any;
+            role: any;
+        };
+    }>;
     resendOtp: (email: string) => Promise<{
         message: string;
     }>;
@@ -46,10 +54,17 @@ export declare const UserService: {
         fatherOccupation: string | null;
         motherOccupation: string | null;
         brothers: string | null;
+        brothersMarried: string | null;
+        sisters: string | null;
+        sistersMarried: string | null;
         familyBio: string | null;
         eatingHabits: string | null;
         drinkingHabits: string | null;
         smokingHabits: string | null;
+        interests: string[];
+        favMusic: string[];
+        favSports: string[];
+        favFood: string[];
         partnerAgeMin: number | null;
         partnerAgeMax: number | null;
         partnerHeightMin: string | null;
@@ -90,10 +105,17 @@ export declare const UserService: {
             fatherOccupation: string | null;
             motherOccupation: string | null;
             brothers: string | null;
+            brothersMarried: string | null;
+            sisters: string | null;
+            sistersMarried: string | null;
             familyBio: string | null;
             eatingHabits: string | null;
             drinkingHabits: string | null;
             smokingHabits: string | null;
+            interests: string[];
+            favMusic: string[];
+            favSports: string[];
+            favFood: string[];
             partnerAgeMin: number | null;
             partnerAgeMax: number | null;
             partnerHeightMin: string | null;

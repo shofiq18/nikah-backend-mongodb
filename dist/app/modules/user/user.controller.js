@@ -6,7 +6,7 @@ import config from '../../../config/index.js';
 const registerUser = catchAsync(async (req, res) => {
     const result = await UserService.registerUser(req.body);
     const { accessToken, user } = result;
-    res.cookie('accessToken', accessToken, {
+    res.cookie('token', accessToken, {
         secure: config.node_env === 'production',
         httpOnly: true,
     });
@@ -23,7 +23,7 @@ const registerUser = catchAsync(async (req, res) => {
 const loginUser = catchAsync(async (req, res) => {
     const result = await UserService.loginUser(req.body);
     const { accessToken, user } = result;
-    res.cookie('accessToken', accessToken, {
+    res.cookie('token', accessToken, {
         secure: config.node_env === 'production',
         httpOnly: true,
     });
@@ -37,9 +37,30 @@ const loginUser = catchAsync(async (req, res) => {
         },
     });
 });
+import { uploadToCloudinary } from '../../utils/cloudinary.js';
 const updateProfile = catchAsync(async (req, res) => {
     const userId = req.user?.id || req.body.userId;
-    const result = await UserService.updateProfile(userId, req.body);
+    if (!userId) {
+        throw new Error('User ID is required for profile update');
+    }
+    const updateData = { ...req.body };
+    delete updateData.userId;
+    if (updateData.photos && Array.isArray(updateData.photos)) {
+        const uploadedPhotos = await Promise.all(updateData.photos.map(async (photo) => {
+            if (photo.startsWith('data:image/')) {
+                return await uploadToCloudinary(photo, `${userId}/portraits`);
+            }
+            return photo;
+        }));
+        updateData.photos = uploadedPhotos;
+    }
+    if (updateData.nidFront && updateData.nidFront.startsWith('data:image/')) {
+        updateData.nidFront = await uploadToCloudinary(updateData.nidFront, `${userId}/security`);
+    }
+    if (updateData.nidBack && updateData.nidBack.startsWith('data:image/')) {
+        updateData.nidBack = await uploadToCloudinary(updateData.nidBack, `${userId}/security`);
+    }
+    const result = await UserService.updateProfile(userId, updateData);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,

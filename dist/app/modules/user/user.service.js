@@ -69,7 +69,23 @@ const verifyEmail = async (email, otp) => {
             verificationOtpExpires: null
         },
     });
-    return updatedUser;
+    const jwtPayload = {
+        email: updatedUser.email,
+        id: updatedUser.id,
+        role: updatedUser.role
+    };
+    const accessToken = jwt.sign(jwtPayload, config.jwt_secret, {
+        expiresIn: config.jwt_expires_in
+    });
+    return {
+        accessToken,
+        user: {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            fullName: updatedUser.fullName,
+            role: updatedUser.role
+        }
+    };
 };
 const loginUser = async (payload) => {
     const user = await prisma.user.findUnique({

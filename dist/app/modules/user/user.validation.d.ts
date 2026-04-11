@@ -60,10 +60,17 @@ export declare const UserValidation: {
             fatherOccupation: z.ZodOptional<z.ZodString>;
             motherOccupation: z.ZodOptional<z.ZodString>;
             brothers: z.ZodOptional<z.ZodString>;
+            brothersMarried: z.ZodOptional<z.ZodString>;
+            sisters: z.ZodOptional<z.ZodString>;
+            sistersMarried: z.ZodOptional<z.ZodString>;
             familyBio: z.ZodOptional<z.ZodString>;
             eatingHabits: z.ZodOptional<z.ZodString>;
             drinkingHabits: z.ZodOptional<z.ZodString>;
             smokingHabits: z.ZodOptional<z.ZodString>;
+            interests: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favMusic: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favSports: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favFood: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>;
     }, z.core.$strip>;
     step7PartnerPreferencesSchema: z.ZodObject<{
@@ -117,10 +124,17 @@ export declare const UserValidation: {
             fatherOccupation: z.ZodOptional<z.ZodString>;
             motherOccupation: z.ZodOptional<z.ZodString>;
             brothers: z.ZodOptional<z.ZodString>;
+            brothersMarried: z.ZodOptional<z.ZodString>;
+            sisters: z.ZodOptional<z.ZodString>;
+            sistersMarried: z.ZodOptional<z.ZodString>;
             familyBio: z.ZodOptional<z.ZodString>;
             eatingHabits: z.ZodOptional<z.ZodString>;
             drinkingHabits: z.ZodOptional<z.ZodString>;
             smokingHabits: z.ZodOptional<z.ZodString>;
+            interests: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favMusic: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favSports: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            favFood: z.ZodOptional<z.ZodArray<z.ZodString>>;
             partnerAgeMin: z.ZodOptional<z.ZodNumber>;
             partnerAgeMax: z.ZodOptional<z.ZodNumber>;
             partnerHeightMin: z.ZodOptional<z.ZodString>;
