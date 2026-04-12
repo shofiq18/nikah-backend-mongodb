@@ -16,8 +16,12 @@ const registerUser = async (payload: TRegisterUser) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
+  // Generate unique memberId
+  const memberId = `NKBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
+
   const result = await (prisma.user as any).create({
     data: {
+      memberId,
       email: payload.email,
       password: hashedPassword,
       profileFor: payload.profileFor,
@@ -113,6 +117,7 @@ const verifyEmail = async (email: string, otp: string) => {
     accessToken,
     user: {
       id: updatedUser.id,
+      memberId: updatedUser.memberId,
       email: updatedUser.email,
       fullName: updatedUser.fullName,
       role: updatedUser.role
@@ -122,7 +127,8 @@ const verifyEmail = async (email: string, otp: string) => {
 
 const loginUser = async (payload: TLoginUser) => {
   const user = await (prisma.user as any).findUnique({
-    where: { email: payload.email }
+    where: { email: payload.email },
+    include: { profile: true }
   });
 
   if (!user) {
@@ -150,17 +156,28 @@ const loginUser = async (payload: TLoginUser) => {
     accessToken,
     user: {
       id: user.id,
+      memberId: user.memberId,
       email: user.email,
       fullName: user.fullName,
-      role: user.role
+      role: user.role,
+      profile: user.profile
     }
   };
 };
 
 const updateProfile = async (userId: string, payload: TUpdateProfile) => {
-  // Handle dob string to Date conversion if needed
-  if (payload.dob && typeof payload.dob === 'string') {
-    payload.dob = new Date(payload.dob);
+  // Handle dob string to Date conversion and calculate age if needed
+  if (payload.dob) {
+    if (typeof payload.dob === 'string') {
+      payload.dob = new Date(payload.dob);
+    }
+    const today = new Date();
+    let age = today.getFullYear() - payload.dob.getFullYear();
+    const m = today.getMonth() - payload.dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < payload.dob.getDate())) {
+      age--;
+    }
+    payload.age = age;
   }
 
   const result = await prisma.profile.update({
@@ -291,11 +308,12 @@ const getAllUserProfiles = async (query: Record<string, any>) => {
     // Base filters for User model
     if (profileFor) where.profileFor = profileFor;
     
-    // Search term (fullName or email)
+    // Search term (fullName or email or memberId)
     if (searchTerm) {
         where.OR = [
             { fullName: { contains: searchTerm, mode: 'insensitive' } },
             { email: { contains: searchTerm, mode: 'insensitive' } },
+            { memberId: { contains: searchTerm, mode: 'insensitive' } },
         ];
     }
 
@@ -359,8 +377,25 @@ const getAllUserProfiles = async (query: Record<string, any>) => {
     };
 };
 
+const getMe = async (id: string) => {
+  const result = await (prisma.user as any).findUnique({
+    where: { id },
+    include: {
+      profile: true
+    }
+  });
+
+  if (!result) {
+    throw new Error('User not found');
+  }
+
+  const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result;
+  return userWithoutSensitiveData;
+};
+
 export const UserService = {
   loginUser,
+  getMe,
   registerUser,
   verifyEmail,
   resendOtp,

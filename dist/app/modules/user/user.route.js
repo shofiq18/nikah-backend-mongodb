@@ -1,13 +1,16 @@
 import express from 'express';
 import { UserController } from './user.controller.js';
+import auth from '../../middlewares/auth.js';
 import { UserValidation } from './user.validation.js';
 import validateRequest from '../../middlewares/validateRequest.js';
 const router = express.Router();
 router.post('/auth/register', validateRequest(UserValidation.registerValidationSchema), UserController.registerUser);
 router.post('/auth/login', validateRequest(UserValidation.loginValidationSchema), UserController.loginUser);
+router.post('/auth/logout', UserController.logout);
 router.post('/auth/verify-email', validateRequest(UserValidation.verifyEmailValidationSchema), UserController.verifyEmail);
 router.post('/auth/resend-otp', UserController.resendOtp);
-router.patch('/users/profile', validateRequest(UserValidation.updateProfileValidationSchema), UserController.updateProfile);
+router.get('/auth/me', auth('USER', 'ADMIN'), UserController.getMe);
+router.patch('/users/profile', auth('USER', 'ADMIN'), validateRequest(UserValidation.updateProfileValidationSchema), UserController.updateProfile);
 router.post('/connections/buy', validateRequest(UserValidation.buyConnectionsValidationSchema), UserController.buyConnections);
 router.get('/users/profiles', UserController.getAllUserProfiles);
 router.get('/users/:id/profile', UserController.getProfile);

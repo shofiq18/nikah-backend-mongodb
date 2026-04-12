@@ -1,13 +1,12 @@
 import httpStatus from "http-status";
 const globalErrorHandler = (err, req, res, next) => {
-    let statusCode = httpStatus.INTERNAL_SERVER_ERROR;
+    let statusCode = (err.message === 'You are not authorized' || err.status === 401) ? httpStatus.UNAUTHORIZED : (err.statusCode || httpStatus.INTERNAL_SERVER_ERROR);
     let success = false;
     let message = err.message || "Something went wrong!";
-    let error = err;
     res.status(statusCode).json({
         success,
         message,
-        error
+        error: process.env.NODE_ENV === 'development' ? err : undefined
     });
 };
 export default globalErrorHandler;

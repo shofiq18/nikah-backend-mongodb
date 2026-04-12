@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  memberId         String   @unique
   email            String   @unique
   password         String   // Hashed
   profileFor       String
@@ -53,6 +54,7 @@ model Profile {
   sect             String?
   motherTongue     String?
   dob              DateTime? // Stored as ISODate
+  age              Int?
   maritalStatus    String?
   height           String?
   physicalStatus   String?

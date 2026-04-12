@@ -9,8 +9,10 @@ const registerUser = async (payload) => {
     const hashedPassword = payload.password ? await bcrypt.hash(payload.password, 12) : '';
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    const memberId = `NKBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
     const result = await prisma.user.create({
         data: {
+            memberId,
             email: payload.email,
             password: hashedPassword,
             profileFor: payload.profileFor,
@@ -84,6 +86,7 @@ const verifyEmail = async (email, otp) => {
         accessToken,
         user: {
             id: updatedUser.id,
+            memberId: updatedUser.memberId,
             email: updatedUser.email,
             fullName: updatedUser.fullName,
             role: updatedUser.role
@@ -92,7 +95,8 @@ const verifyEmail = async (email, otp) => {
 };
 const loginUser = async (payload) => {
     const user = await prisma.user.findUnique({
-        where: { email: payload.email }
+        where: { email: payload.email },
+        include: { profile: true }
     });
     if (!user) {
         throw new Error('User not found');
@@ -115,15 +119,26 @@ const loginUser = async (payload) => {
         accessToken,
         user: {
             id: user.id,
+            memberId: user.memberId,
             email: user.email,
             fullName: user.fullName,
-            role: user.role
+            role: user.role,
+            profile: user.profile
         }
     };
 };
 const updateProfile = async (userId, payload) => {
-    if (payload.dob && typeof payload.dob === 'string') {
-        payload.dob = new Date(payload.dob);
+    if (payload.dob) {
+        if (typeof payload.dob === 'string') {
+            payload.dob = new Date(payload.dob);
+        }
+        const today = new Date();
+        let age = today.getFullYear() - payload.dob.getFullYear();
+        const m = today.getMonth() - payload.dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < payload.dob.getDate())) {
+            age--;
+        }
+        payload.age = age;
     }
     const result = await prisma.profile.update({
         where: {
@@ -217,6 +232,7 @@ const getAllUserProfiles = async (query) => {
         where.OR = [
             { fullName: { contains: searchTerm, mode: 'insensitive' } },
             { email: { contains: searchTerm, mode: 'insensitive' } },
+            { memberId: { contains: searchTerm, mode: 'insensitive' } },
         ];
     }
     const profileFilters = {};
@@ -278,8 +294,22 @@ const getAllUserProfiles = async (query) => {
         data: users,
     };
 };
+const getMe = async (id) => {
+    const result = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            profile: true
+        }
+    });
+    if (!result) {
+        throw new Error('User not found');
+    }
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result;
+    return userWithoutSensitiveData;
+};
 export const UserService = {
     loginUser,
+    getMe,
     registerUser,
     verifyEmail,
     resendOtp,

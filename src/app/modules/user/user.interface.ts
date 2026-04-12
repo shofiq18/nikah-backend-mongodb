@@ -26,6 +26,7 @@ export type TUpdateProfile = {
   sect?: string;
   motherTongue?: string;
   dob?: string | Date;
+  age?: number;
   maritalStatus?: string;
   height?: string;
   physicalStatus?: string;

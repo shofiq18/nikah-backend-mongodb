@@ -35,6 +35,7 @@ export declare const UserValidation: {
             sect: z.ZodOptional<z.ZodString>;
             motherTongue: z.ZodString;
             dob: z.ZodString;
+            age: z.ZodOptional<z.ZodNumber>;
             maritalStatus: z.ZodString;
             height: z.ZodString;
             physicalStatus: z.ZodOptional<z.ZodString>;
@@ -114,6 +115,7 @@ export declare const UserValidation: {
             sect: z.ZodOptional<z.ZodString>;
             motherTongue: z.ZodOptional<z.ZodString>;
             dob: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodDate]>>;
+            age: z.ZodOptional<z.ZodNumber>;
             maritalStatus: z.ZodOptional<z.ZodString>;
             height: z.ZodOptional<z.ZodString>;
             physicalStatus: z.ZodOptional<z.ZodString>;

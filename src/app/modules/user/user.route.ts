@@ -1,6 +1,6 @@
 import express from 'express';
 import { UserController } from './user.controller.js';
-// import auth from '../../middlewares/auth.js';
+import auth from '../../middlewares/auth.js';
 import { UserValidation } from './user.validation.js';
 import validateRequest from '../../middlewares/validateRequest.js';
 
@@ -18,6 +18,10 @@ router.post(
   UserController.loginUser
 );
 router.post(
+  '/auth/logout',
+  UserController.logout
+);
+router.post(
   '/auth/verify-email',
   validateRequest(UserValidation.verifyEmailValidationSchema),
   UserController.verifyEmail
@@ -27,9 +31,16 @@ router.post(
   UserController.resendOtp
 );
 
-// Protected routes (Assume auth middleware is added like auth('USER', 'ADMIN'))
+// Protected routes
+router.get(
+  '/auth/me',
+  auth('USER', 'ADMIN'),
+  UserController.getMe
+);
+
 router.patch(
   '/users/profile',
+  auth('USER', 'ADMIN'),
   validateRequest(UserValidation.updateProfileValidationSchema),
   UserController.updateProfile
 );

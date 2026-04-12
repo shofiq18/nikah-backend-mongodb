@@ -12,6 +12,7 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
   res.cookie('token', accessToken, {
     secure: config.node_env === 'production',
     httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
   sendResponse(res, {
@@ -32,6 +33,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   res.cookie('token', accessToken, {
     secure: config.node_env === 'production',
     httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
   sendResponse(res, {
@@ -170,8 +172,36 @@ const getAllUserProfiles = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMe = catchAsync(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const result = await UserService.getMe(user.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User fetched successfully',
+    data: result,
+  });
+});
+
+const logout = catchAsync(async (req: Request, res: Response) => {
+  res.clearCookie('token', {
+    secure: config.node_env === 'production',
+    httpOnly: true,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User logged out successfully',
+    data: null,
+  });
+});
+
 export const UserController = {
   loginUser,
+  getMe,
+  logout,
   registerUser,
   verifyEmail,
   resendOtp,

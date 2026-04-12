@@ -4,11 +4,14 @@ export declare const UserService: {
         accessToken: string;
         user: {
             id: any;
+            memberId: any;
             email: any;
             fullName: any;
             role: any;
+            profile: any;
         };
     }>;
+    getMe: (id: string) => Promise<any>;
     registerUser: (payload: TRegisterUser) => Promise<{
         accessToken: string;
         user: any;
@@ -17,6 +20,7 @@ export declare const UserService: {
         accessToken: string;
         user: {
             id: any;
+            memberId: any;
             email: any;
             fullName: any;
             role: any;
@@ -37,6 +41,7 @@ export declare const UserService: {
         sect: string | null;
         motherTongue: string | null;
         dob: Date | null;
+        age: number | null;
         maritalStatus: string | null;
         height: string | null;
         physicalStatus: string | null;
@@ -92,6 +97,7 @@ export declare const UserService: {
             sect: string | null;
             motherTongue: string | null;
             dob: Date | null;
+            age: number | null;
             maritalStatus: string | null;
             height: string | null;
             physicalStatus: string | null;
