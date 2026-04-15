@@ -211,7 +211,9 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   let isShortlisted = false;
   
   if (requesterId) {
-    [hasUnlocked, isShortlisted] = await Promise.all([
+    const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+    
+    const queries: any[] = [
       prisma.contactUnlock.findUnique({
         where: {
           unlockedById_targetUserId: {
@@ -219,16 +221,27 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
             targetUserId: targetUserId
           }
         }
-      }),
-      (prisma as any).shortlist.findUnique({
-        where: {
-          userId_targetUserId: {
-            userId: requesterId,
-            targetUserId: targetUserId
+      })
+    ];
+    
+    if (shortlistModel) {
+      queries.push(
+        shortlistModel.findUnique({
+          where: {
+            userId_targetUserId: {
+              userId: requesterId,
+              targetUserId: targetUserId
+            }
           }
-        }
-      }).then((res: any) => !!res)
-    ]);
+        })
+      );
+    } else {
+      queries.push(Promise.resolve(null));
+    }
+
+    const [unlockResult, shortlistResult] = await Promise.all(queries);
+    hasUnlocked = unlockResult;
+    isShortlisted = !!shortlistResult;
   }
 
   if (!hasUnlocked) {
