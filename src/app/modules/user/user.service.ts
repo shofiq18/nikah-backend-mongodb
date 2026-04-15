@@ -220,7 +220,7 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
           }
         }
       }),
-      (prisma.shortlist as any).findUnique({
+      (prisma as any).shortlist.findUnique({
         where: {
           userId_targetUserId: {
             userId: requesterId,
