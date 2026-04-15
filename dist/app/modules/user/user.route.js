@@ -17,5 +17,9 @@ router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfil
 router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockContact);
 router.post('/users/:id/shortlist', auth('USER', 'ADMIN'), UserController.toggleShortlist);
 router.get('/users/shortlisted', auth('USER', 'ADMIN'), UserController.getShortlistedProfiles);
+router.post('/users/:id/interest', auth('USER', 'ADMIN'), UserController.sendInterest);
+router.patch('/users/interests/:interestId', auth('USER', 'ADMIN'), UserController.handleInterestResponse);
+router.get('/users/interests/received', auth('USER', 'ADMIN'), UserController.getReceivedInterests);
+router.get('/users/interests/sent', auth('USER', 'ADMIN'), UserController.getSentInterests);
 export const UserRoutes = router;
 //# sourceMappingURL=user.route.js.map

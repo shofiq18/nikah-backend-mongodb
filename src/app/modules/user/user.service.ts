@@ -209,9 +209,11 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
   let hasUnlocked = null;
   let isShortlisted = false;
+  let interestStatus = null;
   
   if (requesterId) {
     const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+    const interestModel = (prisma as any).interest || (prisma as any).Interest;
     
     const queries: any[] = [
       prisma.contactUnlock.findUnique({
@@ -239,9 +241,25 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
       queries.push(Promise.resolve(null));
     }
 
-    const [unlockResult, shortlistResult] = await Promise.all(queries);
+    if (interestModel) {
+      queries.push(
+        interestModel.findUnique({
+          where: {
+            senderId_receiverId: {
+              senderId: requesterId,
+              receiverId: targetUserId
+            }
+          }
+        })
+      );
+    } else {
+      queries.push(Promise.resolve(null));
+    }
+
+    const [unlockResult, shortlistResult, interestResult] = await Promise.all(queries);
     hasUnlocked = unlockResult;
     isShortlisted = !!shortlistResult;
+    interestStatus = interestResult?.status || null;
   }
 
   if (!hasUnlocked) {
@@ -254,10 +272,10 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
     
     const { email, ...publicUser } = userWithoutSensitiveData;
     publicUser.profile = publicProfile;
-    return { ...publicUser, isUnlocked: false, isShortlisted };
+    return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus };
   }
 
-  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted };
+  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted, interestStatus };
 };
 
 const unlockContact = async (requesterId: string, targetUserId: string) => {
@@ -396,16 +414,29 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
 
     const total = await (prisma.user as any).count({ where });
 
-    // Fetch user's shortlists if authenticated
+    // Fetch user's shortlists and interests if authenticated
     let shortlistedIds: string[] = [];
+    let interestStatusMap: Record<string, string> = {};
     if (requesterId) {
       const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+      const interestModel = (prisma as any).interest || (prisma as any).Interest;
+      
       if (shortlistModel) {
         const shortlists = await shortlistModel.findMany({
           where: { userId: requesterId },
           select: { targetUserId: true }
         });
         shortlistedIds = shortlists.map((s: any) => s.targetUserId);
+      }
+
+      if (interestModel) {
+        const interests = await interestModel.findMany({
+          where: { senderId: requesterId },
+          select: { receiverId: true, status: true }
+        });
+        interests.forEach((i: any) => {
+          interestStatusMap[i.receiverId] = i.status;
+        });
       }
     }
 
@@ -417,8 +448,9 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
             userWithoutSensitiveData.profile = publicProfile;
         }
         
-        // Add isShortlisted flag
+        // Add flags
         userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
+        userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
         
         return userWithoutSensitiveData;
     });
@@ -521,6 +553,108 @@ const getShortlistedProfiles = async (userId: string) => {
   return profiles;
 };
 
+const sendInterest = async (senderId: string, receiverId: string) => {
+  const receiver = await (prisma as any).user.findUnique({ where: { id: receiverId } });
+  if (!receiver) throw new Error('Target user not found');
+
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+  
+  const existingInterest = await interestModel.findUnique({
+    where: {
+      senderId_receiverId: { senderId, receiverId }
+    }
+  });
+
+  if (existingInterest) throw new Error('Interest already sent');
+
+  const result = await interestModel.create({
+    data: {
+      senderId,
+      receiverId,
+      status: 'PENDING'
+    }
+  });
+
+  return result;
+};
+
+const handleInterestResponse = async (userId: string, interestId: string, status: 'ACCEPTED' | 'REJECTED') => {
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+
+  const interest = await interestModel.findUnique({
+    where: { id: interestId }
+  });
+
+  if (!interest || interest.receiverId !== userId) {
+    throw new Error('Interest record not found or unauthorized');
+  }
+
+  const result = await interestModel.update({
+    where: { id: interestId },
+    data: { status }
+  });
+
+  return result;
+};
+
+const getReceivedInterests = async (userId: string) => {
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+
+  const result = await interestModel.findMany({
+    where: { receiverId: userId },
+    include: {
+      sender: {
+        include: {
+          profile: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return result.map((item: any) => {
+    const user = item.sender;
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    if (userWithoutSensitiveData.profile) {
+      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+      userWithoutSensitiveData.profile = publicProfile;
+    }
+    return {
+      ...item,
+      sender: userWithoutSensitiveData
+    };
+  });
+};
+
+const getSentInterests = async (userId: string) => {
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+
+  const result = await interestModel.findMany({
+    where: { senderId: userId },
+    include: {
+      receiver: {
+        include: {
+          profile: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return result.map((item: any) => {
+    const user = item.receiver;
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    if (userWithoutSensitiveData.profile) {
+      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+      userWithoutSensitiveData.profile = publicProfile;
+    }
+    return {
+      ...item,
+      receiver: userWithoutSensitiveData
+    };
+  });
+};
+
 export const UserService = {
   loginUser,
   getMe,
@@ -533,5 +667,9 @@ export const UserService = {
   unlockContact,
   buyConnections,
   toggleShortlist,
-  getShortlistedProfiles
+  getShortlistedProfiles,
+  sendInterest,
+  handleInterestResponse,
+  getReceivedInterests,
+  getSentInterests
 };

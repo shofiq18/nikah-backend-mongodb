@@ -13,4 +13,8 @@ export declare const UserController: {
     buyConnections: (req: Request, res: Response, next: import("express").NextFunction) => void;
     toggleShortlist: (req: Request, res: Response, next: import("express").NextFunction) => void;
     getShortlistedProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    sendInterest: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    handleInterestResponse: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    getReceivedInterests: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    getSentInterests: (req: Request, res: Response, next: import("express").NextFunction) => void;
 };

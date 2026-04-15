@@ -107,4 +107,8 @@ export declare const UserService: {
         isShortlisted: boolean;
     }>;
     getShortlistedProfiles: (userId: string) => Promise<any>;
+    sendInterest: (senderId: string, receiverId: string) => Promise<any>;
+    handleInterestResponse: (userId: string, interestId: string, status: "ACCEPTED" | "REJECTED") => Promise<any>;
+    getReceivedInterests: (userId: string) => Promise<any>;
+    getSentInterests: (userId: string) => Promise<any>;
 };

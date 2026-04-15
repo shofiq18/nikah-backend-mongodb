@@ -238,6 +238,53 @@ const getShortlistedProfiles = catchAsync(async (req: Request, res: Response) =>
   });
 });
 
+const sendInterest = catchAsync(async (req: Request, res: Response) => {
+  const senderId = (req as any).user?.id;
+  const receiverId = req.params.id as string;
+  const result = await UserService.sendInterest(senderId, receiverId);
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "Interest sent successfully",
+    data: result,
+  });
+});
+
+const handleInterestResponse = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  const interestId = req.params.interestId as string;
+  const { status } = req.body;
+  const result = await UserService.handleInterestResponse(userId, interestId, status);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Interest ${status.toLowerCase()} successfully`,
+    data: result,
+  });
+});
+
+const getReceivedInterests = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  const result = await UserService.getReceivedInterests(userId);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Received interests fetched successfully",
+    data: result,
+  });
+});
+
+const getSentInterests = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  const result = await UserService.getSentInterests(userId);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Sent interests fetched successfully",
+    data: result,
+  });
+});
+
 export const UserController = {
   loginUser,
   getMe,
@@ -251,6 +298,10 @@ export const UserController = {
   unlockContact,
   buyConnections,
   toggleShortlist,
-  getShortlistedProfiles
+  getShortlistedProfiles,
+  sendInterest,
+  handleInterestResponse,
+  getReceivedInterests,
+  getSentInterests
 };
 

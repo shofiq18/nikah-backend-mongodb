@@ -39,6 +39,10 @@ model User {
   // --- Shortlisting ---
   shortlists       Shortlist[] @relation("UserShortlists")
   shortlistedBy    Shortlist[] @relation("ShortlistedByOthers")
+  
+  // --- Interest ---
+  interestsSent     Interest[] @relation("SentInterests")
+  interestsReceived Interest[] @relation("ReceivedInterests")
 }
 
 model Shortlist {
@@ -151,4 +155,26 @@ enum Role {
   USER
   ADMIN
   MODERATOR
+}
+
+model Interest {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  senderId     String   @db.ObjectId
+  sender       User     @relation("SentInterests", fields: [senderId], references: [id])
+  
+  receiverId   String   @db.ObjectId
+  receiver     User     @relation("ReceivedInterests", fields: [receiverId], references: [id])
+  
+  status       InterestStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }

@@ -59,5 +59,11 @@ router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockCon
 router.post('/users/:id/shortlist', auth('USER', 'ADMIN'), UserController.toggleShortlist);
 router.get('/users/shortlisted', auth('USER', 'ADMIN'), UserController.getShortlistedProfiles);
 
+// Interest Routes
+router.post('/users/:id/interest', auth('USER', 'ADMIN'), UserController.sendInterest);
+router.patch('/users/interests/:interestId', auth('USER', 'ADMIN'), UserController.handleInterestResponse);
+router.get('/users/interests/received', auth('USER', 'ADMIN'), UserController.getReceivedInterests);
+router.get('/users/interests/sent', auth('USER', 'ADMIN'), UserController.getSentInterests);
+
 // Also exporting under /api/ structure if mounted like this
 export const UserRoutes = router;
