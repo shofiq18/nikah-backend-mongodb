@@ -51,9 +51,13 @@ router.post(
   UserController.buyConnections
 );
 
-router.get('/users/profiles', UserController.getAllUserProfiles);
-router.get('/users/:id/profile', UserController.getProfile);
-router.post('/users/:id/unlock', UserController.unlockContact);
+router.get('/users/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
+router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
+router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockContact);
+
+// Shortlist Routes
+router.post('/users/:id/shortlist', auth('USER', 'ADMIN'), UserController.toggleShortlist);
+router.get('/users/shortlisted', auth('USER', 'ADMIN'), UserController.getShortlistedProfiles);
 
 // Also exporting under /api/ structure if mounted like this
 export const UserRoutes = router;

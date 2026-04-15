@@ -11,4 +11,6 @@ export declare const UserController: {
     getAllUserProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
     unlockContact: (req: Request, res: Response, next: import("express").NextFunction) => void;
     buyConnections: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    toggleShortlist: (req: Request, res: Response, next: import("express").NextFunction) => void;
+    getShortlistedProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
 };

@@ -35,6 +35,24 @@ model User {
   // --- Relational Records ---
   unlockedProfiles ContactUnlock[] @relation("UnlockedBy")
   unlockedByOthers ContactUnlock[] @relation("TargetProfile")
+  
+  // --- Shortlisting ---
+  shortlists       Shortlist[] @relation("UserShortlists")
+  shortlistedBy    Shortlist[] @relation("ShortlistedByOthers")
+}
+
+model Shortlist {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  userId           String   @db.ObjectId
+  user             User     @relation("UserShortlists", fields: [userId], references: [id])
+  
+  targetUserId     String   @db.ObjectId
+  targetUser       User     @relation("ShortlistedByOthers", fields: [targetUserId], references: [id])
+
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, targetUserId])
 }
 
 model Profile {

@@ -86,65 +86,8 @@ export declare const UserService: {
         nidBack: string | null;
         isNidVerified: boolean;
     }>;
-    getProfile: (requesterId: string, targetUserId: string) => Promise<{
-        data: {
-            id: string;
-            userId: string;
-            guardianName: string | null;
-            guardianRelation: string | null;
-            gender: string | null;
-            religion: string | null;
-            sect: string | null;
-            motherTongue: string | null;
-            dob: Date | null;
-            age: number | null;
-            maritalStatus: string | null;
-            height: string | null;
-            physicalStatus: string | null;
-            country: string | null;
-            division: string | null;
-            district: string | null;
-            subDistrict: string | null;
-            state: string | null;
-            citizenship: string | null;
-            highestEducation: string | null;
-            employedIn: string | null;
-            occupation: string | null;
-            annualIncome: string | null;
-            bio: string | null;
-            photos: string[];
-            weight: string | null;
-            bodyType: string | null;
-            nativePlace: string | null;
-            fatherOccupation: string | null;
-            motherOccupation: string | null;
-            brothers: string | null;
-            brothersMarried: string | null;
-            sisters: string | null;
-            sistersMarried: string | null;
-            familyBio: string | null;
-            eatingHabits: string | null;
-            drinkingHabits: string | null;
-            smokingHabits: string | null;
-            interests: string[];
-            favMusic: string[];
-            favSports: string[];
-            favFood: string[];
-            partnerAgeMin: number | null;
-            partnerAgeMax: number | null;
-            partnerHeightMin: string | null;
-            partnerHeightMax: string | null;
-            partnerMaritalStatus: string[];
-            partnerReligions: string[];
-            partnerEducation: string | null;
-            partnerBio: string | null;
-            nidFront: string | null;
-            nidBack: string | null;
-            isNidVerified: boolean;
-        };
-        isUnlocked: boolean;
-    }>;
-    getAllUserProfiles: (query: Record<string, any>) => Promise<{
+    getProfile: (requesterId: string | undefined, targetUserId: string) => Promise<any>;
+    getAllUserProfiles: (query: Record<string, any>, requesterId?: string) => Promise<{
         meta: {
             page: number;
             limit: number;
@@ -159,4 +102,9 @@ export declare const UserService: {
         unlockedAt: Date;
     }>;
     buyConnections: (userId: string, amount: number) => Promise<any>;
+    toggleShortlist: (userId: string, targetUserId: string) => Promise<{
+        message: string;
+        isShortlisted: boolean;
+    }>;
+    getShortlistedProfiles: (userId: string) => Promise<any>;
 };

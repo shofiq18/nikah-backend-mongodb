@@ -95,7 +95,7 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
 const getProfile = catchAsync(async (req: Request, res: Response) => {
   const targetUserId = req.params.id as string;
-  const requesterId = (req as any).user?.id || 'mock-requester-id'; // To be replaced with actual req.user.id
+  const requesterId = (req as any).user?.id; 
 
   const result = await UserService.getProfile(requesterId, targetUserId);
 
@@ -109,7 +109,11 @@ const getProfile = catchAsync(async (req: Request, res: Response) => {
 
 const unlockContact = catchAsync(async (req: Request, res: Response) => {
   const targetUserId = req.params.id as string;
-  const requesterId = (req as any).user?.id || 'mock-requester-id';
+  const requesterId = (req as any).user?.id;
+
+  if (!requesterId) {
+    throw new Error('User not authenticated');
+  }
 
   const result = await UserService.unlockContact(requesterId, targetUserId);
 
@@ -162,7 +166,8 @@ const resendOtp = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllUserProfiles = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUserProfiles(req.query);
+  const requesterId = (req as any).user?.id;
+  const result = await UserService.getAllUserProfiles(req.query, requesterId);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -198,6 +203,41 @@ const logout = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const toggleShortlist = catchAsync(async (req: Request, res: Response) => {
+  const targetUserId = req.params.id as string;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  const result = await UserService.toggleShortlist(userId, targetUserId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
+const getShortlistedProfiles = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  const result = await UserService.getShortlistedProfiles(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Shortlisted profiles fetched successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   loginUser,
   getMe,
@@ -209,6 +249,8 @@ export const UserController = {
   getProfile,
   getAllUserProfiles,
   unlockContact,
-  buyConnections
+  buyConnections,
+  toggleShortlist,
+  getShortlistedProfiles
 };
 

@@ -189,36 +189,62 @@ const updateProfile = async (userId: string, payload: TUpdateProfile) => {
   return result;
 };
 
-const getProfile = async (requesterId: string, targetUserId: string) => {
-  const profile = await prisma.profile.findUnique({
-    where: { userId: targetUserId }
+const getProfile = async (requesterId: string | undefined, targetUserId: string) => {
+  const user = await (prisma.user as any).findUnique({
+    where: { id: targetUserId },
+    include: { profile: true }
   });
 
-  if (!profile) {
+  if (!user || !user.profile) {
     throw new Error('Profile not found');
   }
 
+  const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+  const profile = userWithoutSensitiveData.profile;
+
   // Check if unclocked or if requester is the owner
-  if (requesterId === targetUserId) {
-    return { data: profile, isUnlocked: true };
+  if (requesterId && requesterId === targetUserId) {
+    return { ...userWithoutSensitiveData, isUnlocked: true };
   }
 
-  const hasUnlocked = await prisma.contactUnlock.findUnique({
-    where: {
-      unlockedById_targetUserId: {
-        unlockedById: requesterId,
-        targetUserId: targetUserId
-      }
-    }
-  });
+  let hasUnlocked = null;
+  let isShortlisted = false;
+  
+  if (requesterId) {
+    [hasUnlocked, isShortlisted] = await Promise.all([
+      prisma.contactUnlock.findUnique({
+        where: {
+          unlockedById_targetUserId: {
+            unlockedById: requesterId,
+            targetUserId: targetUserId
+          }
+        }
+      }),
+      (prisma.shortlist as any).findUnique({
+        where: {
+          userId_targetUserId: {
+            userId: requesterId,
+            targetUserId: targetUserId
+          }
+        }
+      }).then((res: any) => !!res)
+    ]);
+  }
 
   if (!hasUnlocked) {
-    // Hide paywalled data
-    const { guardianMobile, guardianEmail, ...publicProfile } = profile;
-    return { data: publicProfile, isUnlocked: false };
+    // Hide paywalled data securely by obfuscation or removal
+    const { nidFront, nidBack, ...publicProfile } = profile;
+    
+    // Obfuscate contact details instead of removing them so frontend can show blurred placeholders
+    if (publicProfile.guardianMobile) publicProfile.guardianMobile = '+8801XXXXXXXXX';
+    if (publicProfile.guardianEmail) publicProfile.guardianEmail = 'hidden@locked.com';
+    
+    const { email, ...publicUser } = userWithoutSensitiveData;
+    publicUser.profile = publicProfile;
+    return { ...publicUser, isUnlocked: false, isShortlisted };
   }
 
-  return { data: profile, isUnlocked: true };
+  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted };
 };
 
 const unlockContact = async (requesterId: string, targetUserId: string) => {
@@ -286,7 +312,7 @@ const resendOtp = async (email: string) => {
   return { message: 'OTP resent successfully' };
 };
 
-const getAllUserProfiles = async (query: Record<string, any>) => {
+const getAllUserProfiles = async (query: Record<string, any>, requesterId?: string) => {
     const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
     const { 
         maritalStatus, 
@@ -357,6 +383,19 @@ const getAllUserProfiles = async (query: Record<string, any>) => {
 
     const total = await (prisma.user as any).count({ where });
 
+    // Fetch user's shortlists if authenticated
+    let shortlistedIds: string[] = [];
+    if (requesterId) {
+      const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+      if (shortlistModel) {
+        const shortlists = await shortlistModel.findMany({
+          where: { userId: requesterId },
+          select: { targetUserId: true }
+        });
+        shortlistedIds = shortlists.map((s: any) => s.targetUserId);
+      }
+    }
+
     // Omit sensitive data
     const users = result.map((user: any) => {
         const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
@@ -364,6 +403,10 @@ const getAllUserProfiles = async (query: Record<string, any>) => {
             const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
             userWithoutSensitiveData.profile = publicProfile;
         }
+        
+        // Add isShortlisted flag
+        userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
+        
         return userWithoutSensitiveData;
     });
 
@@ -393,6 +436,78 @@ const getMe = async (id: string) => {
   return userWithoutSensitiveData;
 };
 
+const toggleShortlist = async (userId: string, targetUserId: string) => {
+  const targetUser = await (prisma as any).user.findUnique({ where: { id: targetUserId } });
+  
+  if (!targetUser) {
+    throw new Error('Target user not found');
+  }
+
+  const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+  if (!shortlistModel) {
+    throw new Error('Shortlist model not found in Prisma client. Please run prisma generate.');
+  }
+
+  const existingShortlist = await shortlistModel.findUnique({
+    where: {
+      userId_targetUserId: {
+        userId,
+        targetUserId
+      }
+    }
+  });
+
+  if (existingShortlist) {
+    await shortlistModel.delete({
+      where: {
+        userId_targetUserId: {
+          userId,
+          targetUserId
+        }
+      }
+    });
+    return { message: 'Removed from shortlist', isShortlisted: false };
+  } else {
+    await shortlistModel.create({
+      data: {
+        userId,
+        targetUserId
+      }
+    });
+    return { message: 'Added to shortlist', isShortlisted: true };
+  }
+};
+
+const getShortlistedProfiles = async (userId: string) => {
+  const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+  if (!shortlistModel) {
+    throw new Error('Shortlist model not found in Prisma client');
+  }
+
+  const result = await shortlistModel.findMany({
+    where: { userId },
+    include: {
+      targetUser: {
+        include: {
+          profile: true
+        }
+      }
+    }
+  });
+
+  const profiles = result.map((item: any) => {
+    const user = item.targetUser;
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    if (userWithoutSensitiveData.profile) {
+      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+      userWithoutSensitiveData.profile = publicProfile;
+    }
+    return userWithoutSensitiveData;
+  });
+
+  return profiles;
+};
+
 export const UserService = {
   loginUser,
   getMe,
@@ -403,5 +518,7 @@ export const UserService = {
   getProfile,
   getAllUserProfiles,
   unlockContact,
-  buyConnections
+  buyConnections,
+  toggleShortlist,
+  getShortlistedProfiles
 };

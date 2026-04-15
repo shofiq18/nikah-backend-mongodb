@@ -149,28 +149,51 @@ const updateProfile = async (userId, payload) => {
     return result;
 };
 const getProfile = async (requesterId, targetUserId) => {
-    const profile = await prisma.profile.findUnique({
-        where: { userId: targetUserId }
+    const user = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        include: { profile: true }
     });
-    if (!profile) {
+    if (!user || !user.profile) {
         throw new Error('Profile not found');
     }
-    if (requesterId === targetUserId) {
-        return { data: profile, isUnlocked: true };
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    const profile = userWithoutSensitiveData.profile;
+    if (requesterId && requesterId === targetUserId) {
+        return { ...userWithoutSensitiveData, isUnlocked: true };
     }
-    const hasUnlocked = await prisma.contactUnlock.findUnique({
-        where: {
-            unlockedById_targetUserId: {
-                unlockedById: requesterId,
-                targetUserId: targetUserId
-            }
-        }
-    });
+    let hasUnlocked = null;
+    let isShortlisted = false;
+    if (requesterId) {
+        [hasUnlocked, isShortlisted] = await Promise.all([
+            prisma.contactUnlock.findUnique({
+                where: {
+                    unlockedById_targetUserId: {
+                        unlockedById: requesterId,
+                        targetUserId: targetUserId
+                    }
+                }
+            }),
+            prisma.shortlist.findUnique({
+                where: {
+                    userId_targetUserId: {
+                        userId: requesterId,
+                        targetUserId: targetUserId
+                    }
+                }
+            }).then((res) => !!res)
+        ]);
+    }
     if (!hasUnlocked) {
-        const { guardianMobile, guardianEmail, ...publicProfile } = profile;
-        return { data: publicProfile, isUnlocked: false };
+        const { nidFront, nidBack, ...publicProfile } = profile;
+        if (publicProfile.guardianMobile)
+            publicProfile.guardianMobile = '+8801XXXXXXXXX';
+        if (publicProfile.guardianEmail)
+            publicProfile.guardianEmail = 'hidden@locked.com';
+        const { email, ...publicUser } = userWithoutSensitiveData;
+        publicUser.profile = publicProfile;
+        return { ...publicUser, isUnlocked: false, isShortlisted };
     }
-    return { data: profile, isUnlocked: true };
+    return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted };
 };
 const unlockContact = async (requesterId, targetUserId) => {
     const user = await prisma.user.findUnique({ where: { id: requesterId } });
@@ -222,7 +245,7 @@ const resendOtp = async (email) => {
     </div>`);
     return { message: 'OTP resent successfully' };
 };
-const getAllUserProfiles = async (query) => {
+const getAllUserProfiles = async (query, requesterId) => {
     const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
     const { maritalStatus, gender, country, division, district, subDistrict, minAge, maxAge, highestEducation, religion, profileFor, searchTerm } = query;
     const where = {};
@@ -277,12 +300,24 @@ const getAllUserProfiles = async (query) => {
         },
     });
     const total = await prisma.user.count({ where });
+    let shortlistedIds = [];
+    if (requesterId) {
+        const shortlistModel = prisma.shortlist || prisma.Shortlist;
+        if (shortlistModel) {
+            const shortlists = await shortlistModel.findMany({
+                where: { userId: requesterId },
+                select: { targetUserId: true }
+            });
+            shortlistedIds = shortlists.map((s) => s.targetUserId);
+        }
+    }
     const users = result.map((user) => {
         const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
         if (userWithoutSensitiveData.profile) {
             const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
             userWithoutSensitiveData.profile = publicProfile;
         }
+        userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
         return userWithoutSensitiveData;
     });
     return {
@@ -307,6 +342,70 @@ const getMe = async (id) => {
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result;
     return userWithoutSensitiveData;
 };
+const toggleShortlist = async (userId, targetUserId) => {
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!targetUser) {
+        throw new Error('Target user not found');
+    }
+    const shortlistModel = prisma.shortlist || prisma.Shortlist;
+    if (!shortlistModel) {
+        throw new Error('Shortlist model not found in Prisma client. Please run prisma generate.');
+    }
+    const existingShortlist = await shortlistModel.findUnique({
+        where: {
+            userId_targetUserId: {
+                userId,
+                targetUserId
+            }
+        }
+    });
+    if (existingShortlist) {
+        await shortlistModel.delete({
+            where: {
+                userId_targetUserId: {
+                    userId,
+                    targetUserId
+                }
+            }
+        });
+        return { message: 'Removed from shortlist', isShortlisted: false };
+    }
+    else {
+        await shortlistModel.create({
+            data: {
+                userId,
+                targetUserId
+            }
+        });
+        return { message: 'Added to shortlist', isShortlisted: true };
+    }
+};
+const getShortlistedProfiles = async (userId) => {
+    const shortlistModel = prisma.shortlist || prisma.Shortlist;
+    if (!shortlistModel) {
+        throw new Error('Shortlist model not found in Prisma client');
+    }
+    const result = await shortlistModel.findMany({
+        where: { userId },
+        include: {
+            targetUser: {
+                include: {
+                    profile: true
+                }
+            }
+        }
+    });
+    const profiles = result.map((item) => {
+        const user = item.targetUser;
+        const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+        if (userWithoutSensitiveData.profile) {
+            const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+            userWithoutSensitiveData.profile = publicProfile;
+        }
+        return userWithoutSensitiveData;
+    });
+    return profiles;
+};
 export const UserService = {
     loginUser,
     getMe,
@@ -317,6 +416,8 @@ export const UserService = {
     getProfile,
     getAllUserProfiles,
     unlockContact,
-    buyConnections
+    buyConnections,
+    toggleShortlist,
+    getShortlistedProfiles
 };
 //# sourceMappingURL=user.service.js.map
