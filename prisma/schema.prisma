@@ -122,8 +122,8 @@ model Profile {
   partnerAgeMax        Int?
   partnerHeightMin     String?
   partnerHeightMax     String?
-  partnerMaritalStatus String[] @default([])
-  partnerReligions     String[] @default([])
+  partnerMaritalStatus String?
+  partnerReligions     String?
   partnerEducation     String?
   partnerBio           String?
 
