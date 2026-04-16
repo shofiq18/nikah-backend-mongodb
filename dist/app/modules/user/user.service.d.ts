@@ -78,8 +78,8 @@ export declare const UserService: {
         partnerAgeMax: number | null;
         partnerHeightMin: string | null;
         partnerHeightMax: string | null;
-        partnerMaritalStatus: string[];
-        partnerReligions: string[];
+        partnerMaritalStatus: string | null;
+        partnerReligions: string | null;
         partnerEducation: string | null;
         partnerBio: string | null;
         nidFront: string | null;

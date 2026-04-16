@@ -9,6 +9,7 @@ const registerUser = catchAsync(async (req, res) => {
     res.cookie('token', accessToken, {
         secure: config.node_env === 'production',
         httpOnly: true,
+        sameSite: config.node_env === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     sendResponse(res, {
@@ -27,6 +28,7 @@ const loginUser = catchAsync(async (req, res) => {
     res.cookie('token', accessToken, {
         secure: config.node_env === 'production',
         httpOnly: true,
+        sameSite: config.node_env === 'production' ? 'none' : 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     sendResponse(res, {
@@ -98,11 +100,21 @@ const unlockContact = catchAsync(async (req, res) => {
 const verifyEmail = catchAsync(async (req, res) => {
     const { email, otp } = req.body;
     const result = await UserService.verifyEmail(email, otp);
+    const { accessToken, user } = result;
+    res.cookie('token', accessToken, {
+        secure: config.node_env === 'production',
+        httpOnly: true,
+        sameSite: config.node_env === 'production' ? 'none' : 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
         message: 'Email verified successfully',
-        data: result,
+        data: {
+            accessToken,
+            user
+        },
     });
 });
 const buyConnections = catchAsync(async (req, res) => {
