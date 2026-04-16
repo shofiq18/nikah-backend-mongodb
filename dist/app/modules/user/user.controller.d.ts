@@ -10,7 +10,6 @@ export declare const UserController: {
     getProfile: (req: Request, res: Response, next: import("express").NextFunction) => void;
     getAllUserProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
     unlockContact: (req: Request, res: Response, next: import("express").NextFunction) => void;
-    buyConnections: (req: Request, res: Response, next: import("express").NextFunction) => void;
     toggleShortlist: (req: Request, res: Response, next: import("express").NextFunction) => void;
     getShortlistedProfiles: (req: Request, res: Response, next: import("express").NextFunction) => void;
     sendInterest: (req: Request, res: Response, next: import("express").NextFunction) => void;

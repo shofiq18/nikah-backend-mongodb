@@ -1,17 +1,19 @@
-import express, { Application, NextFunction, Request, Response } from "express";
+import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import config from "./config/index.js";
-import { uptime } from "process";
-import { timeStamp } from "console";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler.js";
 import notFound from "./app/middlewares/notFound.js";
 import { UserRoutes } from "./app/modules/user/user.route.js";
+import { TransactionRoutes } from "./app/modules/transaction/transaction.route.js";
+import { MessageRoutes } from "./app/modules/message/message.route.js";
+
 const app: Application = express();
+
 app.use(
   cors({
-    origin: ["https://nikahbd.vercel.app", "http://localhost:3000"],
+    origin: ["https://nikahbd.vercel.app", "http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   }),
@@ -33,9 +35,10 @@ app.get("/", (req: Request, res: Response) => {
 
 // ─── API ROUTES ──────────────────────────────────────────────────────
 app.use("/api/v1", UserRoutes);
+app.use("/api/v1/transactions", TransactionRoutes);
+app.use("/api/v1/messages", MessageRoutes);
 
 app.use(globalErrorHandler);
-
 app.use(notFound);
 
 export default app;

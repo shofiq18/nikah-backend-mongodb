@@ -3,6 +3,9 @@ import httpStatus from 'http-status';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import config from '../../config/index.js';
 import catchAsync from '../utils/catchAsync.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const auth = (...roles: string[]) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
@@ -42,7 +45,14 @@ const auth = (...roles: string[]) => {
       throw new Error('You are not authorized');
     }
 
-    const { role } = decoded;
+    const { id, role } = decoded;
+
+    // CHECK IF USER EXISTS IN DB (New Security Check)
+    const user = await (prisma.user as any).findUnique({ where: { id } });
+    if (!user) {
+        console.log('Auth Failed: User with this ID no longer exists');
+        throw new Error('You are not authorized');
+    }
 
     // case-insensitive role check
     if (roles.length && !roles.some(r => r.toUpperCase() === role.toUpperCase())) {

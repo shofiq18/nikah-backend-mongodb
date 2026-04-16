@@ -101,7 +101,6 @@ export declare const UserService: {
         targetUserId: string;
         unlockedAt: Date;
     }>;
-    buyConnections: (userId: string, amount: number) => Promise<any>;
     toggleShortlist: (userId: string, targetUserId: string) => Promise<{
         message: string;
         isShortlisted: boolean;

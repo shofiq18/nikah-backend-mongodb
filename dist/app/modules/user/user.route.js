@@ -11,7 +11,6 @@ router.post('/auth/verify-email', validateRequest(UserValidation.verifyEmailVali
 router.post('/auth/resend-otp', UserController.resendOtp);
 router.get('/auth/me', auth('USER', 'ADMIN'), UserController.getMe);
 router.patch('/users/profile', auth('USER', 'ADMIN'), validateRequest(UserValidation.updateProfileValidationSchema), UserController.updateProfile);
-router.post('/connections/buy', validateRequest(UserValidation.buyConnectionsValidationSchema), UserController.buyConnections);
 router.get('/users/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
 router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockContact);

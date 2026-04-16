@@ -45,10 +45,17 @@ export type TUpdateProfile = {
   fatherOccupation?: string;
   motherOccupation?: string;
   brothers?: string;
+  brothersMarried?: string;
+  sisters?: string;
+  sistersMarried?: string;
   familyBio?: string;
   eatingHabits?: string;
   drinkingHabits?: string;
   smokingHabits?: string;
+  interests?: string[];
+  favMusic?: string[];
+  favSports?: string[];
+  favFood?: string[];
   partnerAgeMin?: number;
   partnerAgeMax?: number;
   partnerHeightMin?: string;

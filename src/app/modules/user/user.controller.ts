@@ -151,19 +151,6 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const buyConnections = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id || req.body.userId; // Usually from auth
-  const { amount } = req.body;
-
-  const result = await UserService.buyConnections(userId, amount);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Connections purchased successfully',
-    data: result,
-  });
-});
 
 const resendOtp = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -309,7 +296,6 @@ export const UserController = {
   getProfile,
   getAllUserProfiles,
   unlockContact,
-  buyConnections,
   toggleShortlist,
   getShortlistedProfiles,
   sendInterest,

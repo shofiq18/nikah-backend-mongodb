@@ -222,29 +222,50 @@ const getProfile = async (requesterId, targetUserId) => {
 };
 const unlockContact = async (requesterId, targetUserId) => {
     const user = await prisma.user.findUnique({ where: { id: requesterId } });
-    if (!user || user.connections < 1) {
-        throw new Error('Insufficient Balance');
-    }
-    const result = await prisma.$transaction([
-        prisma.user.update({
-            where: { id: requesterId },
-            data: { connections: { decrement: 1 } }
-        }),
-        prisma.contactUnlock.create({
-            data: {
+    if (!user)
+        throw new Error('User not found');
+    const existingUnlock = await prisma.contactUnlock.findUnique({
+        where: {
+            unlockedById_targetUserId: {
                 unlockedById: requesterId,
                 targetUserId: targetUserId
             }
-        })
-    ]);
-    return result[1];
-};
-const buyConnections = async (userId, amount) => {
-    const result = await prisma.user.update({
-        where: { id: userId },
-        data: { connections: { increment: amount } }
+        }
     });
-    return result;
+    if (existingUnlock)
+        return existingUnlock;
+    const isPlanActive = user.planType !== 'FREE' && user.planExpiry && new Date(user.planExpiry) > new Date();
+    if (isPlanActive && user.remainingNumbers > 0) {
+        const result = await prisma.$transaction([
+            prisma.user.update({
+                where: { id: requesterId },
+                data: { remainingNumbers: user.remainingNumbers - 1 }
+            }),
+            prisma.contactUnlock.create({
+                data: {
+                    unlockedById: requesterId,
+                    targetUserId: targetUserId
+                }
+            })
+        ]);
+        return result[1];
+    }
+    if (user.availableTokens > 0) {
+        const result = await prisma.$transaction([
+            prisma.user.update({
+                where: { id: requesterId },
+                data: { availableTokens: user.availableTokens - 1 }
+            }),
+            prisma.contactUnlock.create({
+                data: {
+                    unlockedById: requesterId,
+                    targetUserId: targetUserId
+                }
+            })
+        ]);
+        return result[1];
+    }
+    throw new Error('INSUFFICIENT_BALANCE');
 };
 const resendOtp = async (email) => {
     const user = await prisma.user.findUnique({ where: { email } });
@@ -540,7 +561,6 @@ export const UserService = {
     getProfile,
     getAllUserProfiles,
     unlockContact,
-    buyConnections,
     toggleShortlist,
     getShortlistedProfiles,
     sendInterest,

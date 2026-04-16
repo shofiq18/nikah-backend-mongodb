@@ -45,11 +45,6 @@ router.patch(
   UserController.updateProfile
 );
 
-router.post(
-  '/connections/buy',
-  validateRequest(UserValidation.buyConnectionsValidationSchema),
-  UserController.buyConnections
-);
 
 router.get('/users/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);

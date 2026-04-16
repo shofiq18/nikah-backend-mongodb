@@ -5,9 +5,11 @@ import config from "./config/index.js";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler.js";
 import notFound from "./app/middlewares/notFound.js";
 import { UserRoutes } from "./app/modules/user/user.route.js";
+import { TransactionRoutes } from "./app/modules/transaction/transaction.route.js";
+import { MessageRoutes } from "./app/modules/message/message.route.js";
 const app = express();
 app.use(cors({
-    origin: ["https://nikahbd.vercel.app", "http://localhost:3000"],
+    origin: ["https://nikahbd.vercel.app", "http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
 }));
@@ -23,6 +25,8 @@ app.get("/", (req, res) => {
     });
 });
 app.use("/api/v1", UserRoutes);
+app.use("/api/v1/transactions", TransactionRoutes);
+app.use("/api/v1/messages", MessageRoutes);
 app.use(globalErrorHandler);
 app.use(notFound);
 export default app;

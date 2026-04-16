@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import config from '../../config/index.js';
 import catchAsync from '../utils/catchAsync.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 const auth = (...roles) => {
     return catchAsync(async (req, res, next) => {
         let token = req.headers.authorization;
@@ -28,7 +30,12 @@ const auth = (...roles) => {
             console.log('Auth Failed: JWT verification error:', error.message);
             throw new Error('You are not authorized');
         }
-        const { role } = decoded;
+        const { id, role } = decoded;
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
+            console.log('Auth Failed: User with this ID no longer exists');
+            throw new Error('You are not authorized');
+        }
         if (roles.length && !roles.some(r => r.toUpperCase() === role.toUpperCase())) {
             console.log('Auth Failed: Role mismatch. Required:', roles, 'Actual:', role);
             throw new Error('You are not authorized');

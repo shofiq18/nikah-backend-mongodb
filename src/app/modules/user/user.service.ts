@@ -30,7 +30,7 @@ const registerUser = async (payload: TRegisterUser) => {
       verificationOtpExpires: otpExpires,
       profile: {
         create: {
-            gender: payload.gender
+          gender: payload.gender
         } // Initialize an empty profile for the onboarding steps
       }
     },
@@ -48,7 +48,7 @@ const registerUser = async (payload: TRegisterUser) => {
       <p>This OTP will expire in 10 minutes.</p>
     </div>`
   );
-  
+
   // Omit sensitive data from result
   const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result as any;
 
@@ -70,7 +70,7 @@ const registerUser = async (payload: TRegisterUser) => {
 
 const verifyEmail = async (email: string, otp: string) => {
   const user = await (prisma.user as any).findUnique({ where: { email } });
-  
+
   if (!user) {
     throw new Error('User not found');
   }
@@ -95,7 +95,7 @@ const verifyEmail = async (email: string, otp: string) => {
 
   const updatedUser = await (prisma.user as any).update({
     where: { email },
-    data: { 
+    data: {
       isEmailVerified: true,
       onboardingStep: 2,
       verificationOtp: null,
@@ -210,11 +210,11 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   let hasUnlocked = null;
   let isShortlisted = false;
   let interestStatus = null;
-  
+
   if (requesterId) {
     const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
     const interestModel = (prisma as any).interest || (prisma as any).Interest;
-    
+
     const queries: any[] = [
       prisma.contactUnlock.findUnique({
         where: {
@@ -225,7 +225,7 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
         }
       })
     ];
-    
+
     if (shortlistModel) {
       queries.push(
         shortlistModel.findUnique({
@@ -265,11 +265,11 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   if (!hasUnlocked) {
     // Hide paywalled data securely by obfuscation or removal
     const { nidFront, nidBack, ...publicProfile } = profile;
-    
+
     // Obfuscate contact details instead of removing them so frontend can show blurred placeholders
     if (publicProfile.guardianMobile) publicProfile.guardianMobile = '+8801XXXXXXXXX';
     if (publicProfile.guardianEmail) publicProfile.guardianEmail = 'hidden@locked.com';
-    
+
     const { email, ...publicUser } = userWithoutSensitiveData;
     publicUser.profile = publicProfile;
     return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus };
@@ -280,38 +280,64 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
 const unlockContact = async (requesterId: string, targetUserId: string) => {
   const user = await (prisma.user as any).findUnique({ where: { id: requesterId } });
-  
-  if (!user || user.connections < 1) {
-    throw new Error('Insufficient Balance');
-  }
 
-  const result = await prisma.$transaction([
-    (prisma.user as any).update({
-      where: { id: requesterId },
-      data: { connections: { decrement: 1 } }
-    }),
-    prisma.contactUnlock.create({
-      data: {
+  if (!user) throw new Error('User not found');
+
+  // Priority 1: Check if already unlocked (handled by unique constraint in create, but we check first for better UX)
+  const existingUnlock = await prisma.contactUnlock.findUnique({
+    where: {
+      unlockedById_targetUserId: {
         unlockedById: requesterId,
         targetUserId: targetUserId
       }
-    })
-  ]);
-
-  return result[1];
-};
-
-const buyConnections = async (userId: string, amount: number) => {
-  const result = await (prisma.user as any).update({
-    where: { id: userId },
-    data: { connections: { increment: amount } }
+    }
   });
-  return result;
+
+  if (existingUnlock) return existingUnlock;
+
+  // Priority 2: Check active Subscription Plan
+  const isPlanActive = user.planType !== 'FREE' && user.planExpiry && new Date(user.planExpiry) > new Date();
+
+  if (isPlanActive && user.remainingNumbers > 0) {
+    const result = await prisma.$transaction([
+      (prisma.user as any).update({
+        where: { id: requesterId },
+        data: { remainingNumbers: user.remainingNumbers - 1 }
+      }),
+      prisma.contactUnlock.create({
+        data: {
+          unlockedById: requesterId,
+          targetUserId: targetUserId
+        }
+      })
+    ]);
+    return result[1];
+  }
+
+  // Priority 3: Check available Tokens
+  if (user.availableTokens > 0) {
+    const result = await prisma.$transaction([
+      (prisma.user as any).update({
+        where: { id: requesterId },
+        data: { availableTokens: user.availableTokens - 1 }
+      }),
+      prisma.contactUnlock.create({
+        data: {
+          unlockedById: requesterId,
+          targetUserId: targetUserId
+        }
+      })
+    ]);
+    return result[1];
+  }
+
+  throw new Error('INSUFFICIENT_BALANCE');
 };
+
 
 const resendOtp = async (email: string) => {
   const user = await (prisma.user as any).findUnique({ where: { email } });
-  
+
   if (!user) {
     throw new Error('User not found');
   }
@@ -344,125 +370,125 @@ const resendOtp = async (email: string) => {
 };
 
 const getAllUserProfiles = async (query: Record<string, any>, requesterId?: string) => {
-    const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
-    const { 
-        maritalStatus, 
-        gender, 
-        country, 
-        division, 
-        district, 
-        subDistrict, 
-        minAge, 
-        maxAge, 
-        highestEducation,
-        religion,
-        profileFor,
-        searchTerm
-    } = query;
+  const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
+  const {
+    maritalStatus,
+    gender,
+    country,
+    division,
+    district,
+    subDistrict,
+    minAge,
+    maxAge,
+    highestEducation,
+    religion,
+    profileFor,
+    searchTerm
+  } = query;
 
-    const where: any = {};
+  const where: any = {};
 
-    // Base filters for User model
-    if (profileFor) where.profileFor = profileFor;
-    
-    // Search term (fullName or email or memberId)
-    if (searchTerm) {
-        where.OR = [
-            { fullName: { contains: searchTerm, mode: 'insensitive' } },
-            { email: { contains: searchTerm, mode: 'insensitive' } },
-            { memberId: { contains: searchTerm, mode: 'insensitive' } },
-        ];
+  // Base filters for User model
+  if (profileFor) where.profileFor = profileFor;
+
+  // Search term (fullName or email or memberId)
+  if (searchTerm) {
+    where.OR = [
+      { fullName: { contains: searchTerm, mode: 'insensitive' } },
+      { email: { contains: searchTerm, mode: 'insensitive' } },
+      { memberId: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  // Profile specific filters
+  const profileFilters: any = {};
+  if (gender) profileFilters.gender = gender;
+  if (maritalStatus) profileFilters.maritalStatus = maritalStatus;
+  if (country) profileFilters.country = country;
+  if (division) profileFilters.division = division;
+  if (district) profileFilters.district = district;
+  if (subDistrict) profileFilters.subDistrict = subDistrict;
+  if (highestEducation) profileFilters.highestEducation = highestEducation;
+  if (religion) profileFilters.religion = religion;
+
+  // Age calculation from DOB
+  if (minAge || maxAge) {
+    const now = new Date();
+    const maxDob = minAge ? new Date(now.getFullYear() - Number(minAge), now.getMonth(), now.getDate()) : undefined;
+    const minDob = maxAge ? new Date(now.getFullYear() - Number(maxAge) - 1, now.getMonth(), now.getDate()) : undefined;
+
+    profileFilters.dob = {};
+    if (minDob) profileFilters.dob.gte = minDob;
+    if (maxDob) profileFilters.dob.lte = maxDob;
+  }
+
+  if (Object.keys(profileFilters).length > 0) {
+    where.profile = profileFilters;
+  }
+
+  const result = await (prisma.user as any).findMany({
+    where,
+    skip,
+    take: limit,
+    include: {
+      profile: true,
+    },
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+  });
+
+  const total = await (prisma.user as any).count({ where });
+
+  // Fetch user's shortlists and interests if authenticated
+  let shortlistedIds: string[] = [];
+  let interestStatusMap: Record<string, string> = {};
+  if (requesterId) {
+    const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+    const interestModel = (prisma as any).interest || (prisma as any).Interest;
+
+    if (shortlistModel) {
+      const shortlists = await shortlistModel.findMany({
+        where: { userId: requesterId },
+        select: { targetUserId: true }
+      });
+      shortlistedIds = shortlists.map((s: any) => s.targetUserId);
     }
 
-    // Profile specific filters
-    const profileFilters: any = {};
-    if (gender) profileFilters.gender = gender;
-    if (maritalStatus) profileFilters.maritalStatus = maritalStatus;
-    if (country) profileFilters.country = country;
-    if (division) profileFilters.division = division;
-    if (district) profileFilters.district = district;
-    if (subDistrict) profileFilters.subDistrict = subDistrict;
-    if (highestEducation) profileFilters.highestEducation = highestEducation;
-    if (religion) profileFilters.religion = religion;
+    if (interestModel) {
+      const interests = await interestModel.findMany({
+        where: { senderId: requesterId },
+        select: { receiverId: true, status: true }
+      });
+      interests.forEach((i: any) => {
+        interestStatusMap[i.receiverId] = i.status;
+      });
+    }
+  }
 
-    // Age calculation from DOB
-    if (minAge || maxAge) {
-        const now = new Date();
-        const maxDob = minAge ? new Date(now.getFullYear() - Number(minAge), now.getMonth(), now.getDate()) : undefined;
-        const minDob = maxAge ? new Date(now.getFullYear() - Number(maxAge) - 1, now.getMonth(), now.getDate()) : undefined;
-
-        profileFilters.dob = {};
-        if (minDob) profileFilters.dob.gte = minDob;
-        if (maxDob) profileFilters.dob.lte = maxDob;
+  // Omit sensitive data
+  const users = result.map((user: any) => {
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    if (userWithoutSensitiveData.profile) {
+      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+      userWithoutSensitiveData.profile = publicProfile;
     }
 
-    if (Object.keys(profileFilters).length > 0) {
-        where.profile = profileFilters;
-    }
+    // Add flags
+    userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
+    userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
 
-    const result = await (prisma.user as any).findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
-            profile: true,
-        },
-        orderBy: {
-            [sortBy]: sortOrder,
-        },
-    });
+    return userWithoutSensitiveData;
+  });
 
-    const total = await (prisma.user as any).count({ where });
-
-    // Fetch user's shortlists and interests if authenticated
-    let shortlistedIds: string[] = [];
-    let interestStatusMap: Record<string, string> = {};
-    if (requesterId) {
-      const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
-      const interestModel = (prisma as any).interest || (prisma as any).Interest;
-      
-      if (shortlistModel) {
-        const shortlists = await shortlistModel.findMany({
-          where: { userId: requesterId },
-          select: { targetUserId: true }
-        });
-        shortlistedIds = shortlists.map((s: any) => s.targetUserId);
-      }
-
-      if (interestModel) {
-        const interests = await interestModel.findMany({
-          where: { senderId: requesterId },
-          select: { receiverId: true, status: true }
-        });
-        interests.forEach((i: any) => {
-          interestStatusMap[i.receiverId] = i.status;
-        });
-      }
-    }
-
-    // Omit sensitive data
-    const users = result.map((user: any) => {
-        const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
-        if (userWithoutSensitiveData.profile) {
-            const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
-            userWithoutSensitiveData.profile = publicProfile;
-        }
-        
-        // Add flags
-        userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
-        userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
-        
-        return userWithoutSensitiveData;
-    });
-
-    return {
-        meta: {
-            page,
-            limit,
-            total,
-        },
-        data: users,
-    };
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: users,
+  };
 };
 
 const getMe = async (id: string) => {
@@ -483,7 +509,7 @@ const getMe = async (id: string) => {
 
 const toggleShortlist = async (userId: string, targetUserId: string) => {
   const targetUser = await (prisma as any).user.findUnique({ where: { id: targetUserId } });
-  
+
   if (!targetUser) {
     throw new Error('Target user not found');
   }
@@ -558,7 +584,7 @@ const sendInterest = async (senderId: string, receiverId: string) => {
   if (!receiver) throw new Error('Target user not found');
 
   const interestModel = (prisma as any).interest || (prisma as any).Interest;
-  
+
   const existingInterest = await interestModel.findUnique({
     where: {
       senderId_receiverId: { senderId, receiverId }
@@ -665,7 +691,6 @@ export const UserService = {
   getProfile,
   getAllUserProfiles,
   unlockContact,
-  buyConnections,
   toggleShortlist,
   getShortlistedProfiles,
   sendInterest,

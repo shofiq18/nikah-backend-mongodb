@@ -19,8 +19,13 @@ model User {
   verificationOtpExpires DateTime?
   
   // Role & Monetization
-  role             Role     @default(USER) // e.g., USER, ADMIN
-  connections      Int      @default(0)    // Wallet balance
+  role             Role     @default(USER)
+  
+  // Dual Access Monetization
+  availableTokens  Int      @default(0)    // Token based (Quick Access)
+  planType         PlanType @default(FREE) // Subscription based
+  planExpiry       DateTime?               // Subscription duration
+  remainingNumbers Int      @default(0)    // Remaining contacts from Plan
   
   // Progress tracking
   onboardingStep   Int      @default(1)
@@ -43,6 +48,43 @@ model User {
   // --- Interest ---
   interestsSent     Interest[] @relation("SentInterests")
   interestsReceived Interest[] @relation("ReceivedInterests")
+  
+  // --- Transactions ---
+  transactions      Transaction[]
+
+  // --- Messages ---
+  messagesSent      Message[] @relation("SentMessages")
+  messagesReceived  Message[] @relation("ReceivedMessages")
+}
+
+model Transaction {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id])
+  
+  amount           Float
+  productType      ProductType // TOKEN or SUBSCRIPTION
+  packageName      String      // e.g., "5 Tokens" or "Gold (3 Months)"
+  senderNumber     String
+  trxId            String      @unique
+  status           TransactionStatus @default(PENDING)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Message {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  senderId     String   @db.ObjectId
+  sender       User     @relation("SentMessages", fields: [senderId], references: [id])
+  
+  receiverId   String   @db.ObjectId
+  receiver     User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  content      String
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
 }
 
 model Shortlist {
@@ -151,12 +193,6 @@ model ContactUnlock {
   @@unique([unlockedById, targetUserId])
 }
 
-enum Role {
-  USER
-  ADMIN
-  MODERATOR
-}
-
 model Interest {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   
@@ -171,6 +207,30 @@ model Interest {
   updatedAt    DateTime @updatedAt
 
   @@unique([senderId, receiverId])
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum PlanType {
+  FREE
+  GOLD
+  DIAMOND
+  PLATINUM
+}
+
+enum ProductType {
+  TOKEN
+  SUBSCRIPTION
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  REJECTED
 }
 
 enum InterestStatus {
