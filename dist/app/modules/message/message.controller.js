@@ -29,6 +29,19 @@ const getMyInbox = async (req, res) => {
         res.status(400).json({ success: false, message: error.message });
     }
 };
+const getSentMessages = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const result = await MessageService.getSentMessages(userId);
+        res.status(200).json({
+            success: true,
+            data: result,
+        });
+    }
+    catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
 const getConversation = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -45,6 +58,7 @@ const getConversation = async (req, res) => {
 export const MessageController = {
     sendMessage,
     getMyInbox,
+    getSentMessages,
     getConversation
 };
 //# sourceMappingURL=message.controller.js.map

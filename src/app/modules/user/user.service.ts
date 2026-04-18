@@ -386,10 +386,22 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
     searchTerm
   } = query;
 
-  const where: any = {};
+  const where: any = { role: 'USER' };
 
   // Base filters for User model
   if (profileFor) where.profileFor = profileFor;
+
+  // Determine opposite gender for logged-in user
+  let oppositeGender: string | undefined;
+  if (requesterId) {
+    const requester = await (prisma.user as any).findUnique({
+      where: { id: requesterId },
+      include: { profile: true }
+    });
+    if (requester?.profile?.gender) {
+      oppositeGender = requester.profile.gender === 'Male' ? 'Female' : 'Male';
+    }
+  }
 
   // Search term (fullName or email or memberId)
   if (searchTerm) {
@@ -402,7 +414,12 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
 
   // Profile specific filters
   const profileFilters: any = {};
-  if (gender) profileFilters.gender = gender;
+  if (gender) {
+    profileFilters.gender = gender;
+  } else if (oppositeGender) {
+    profileFilters.gender = oppositeGender;
+  }
+
   if (maritalStatus) profileFilters.maritalStatus = maritalStatus;
   if (country) profileFilters.country = country;
   if (division) profileFilters.division = division;

@@ -294,9 +294,19 @@ const resendOtp = async (email) => {
 const getAllUserProfiles = async (query, requesterId) => {
     const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
     const { maritalStatus, gender, country, division, district, subDistrict, minAge, maxAge, highestEducation, religion, profileFor, searchTerm } = query;
-    const where = {};
+    const where = { role: 'USER' };
     if (profileFor)
         where.profileFor = profileFor;
+    let oppositeGender;
+    if (requesterId) {
+        const requester = await prisma.user.findUnique({
+            where: { id: requesterId },
+            include: { profile: true }
+        });
+        if (requester?.profile?.gender) {
+            oppositeGender = requester.profile.gender === 'Male' ? 'Female' : 'Male';
+        }
+    }
     if (searchTerm) {
         where.OR = [
             { fullName: { contains: searchTerm, mode: 'insensitive' } },
@@ -305,8 +315,12 @@ const getAllUserProfiles = async (query, requesterId) => {
         ];
     }
     const profileFilters = {};
-    if (gender)
+    if (gender) {
         profileFilters.gender = gender;
+    }
+    else if (oppositeGender) {
+        profileFilters.gender = oppositeGender;
+    }
     if (maritalStatus)
         profileFilters.maritalStatus = maritalStatus;
     if (country)

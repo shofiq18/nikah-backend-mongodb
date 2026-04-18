@@ -42,6 +42,20 @@ const getMyInbox = async (userId) => {
     });
     return result;
 };
+const getSentMessages = async (userId) => {
+    const result = await prisma.message.findMany({
+        where: { senderId: userId },
+        include: {
+            receiver: {
+                include: {
+                    profile: true
+                }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+    return result;
+};
 const getConversation = async (userId, otherUserId) => {
     return await prisma.message.findMany({
         where: {
@@ -62,6 +76,7 @@ const markAsRead = async (messageId) => {
 export const MessageService = {
     sendMessage,
     getMyInbox,
+    getSentMessages,
     getConversation,
     markAsRead
 };
