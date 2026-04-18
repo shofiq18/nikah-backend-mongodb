@@ -17,6 +17,12 @@ router.get(
 );
 
 router.get(
+  '/sent',
+  auth('USER', 'ADMIN'),
+  MessageController.getSentMessages
+);
+
+router.get(
   '/conversation/:otherUserId',
   auth('USER', 'ADMIN'),
   MessageController.getConversation

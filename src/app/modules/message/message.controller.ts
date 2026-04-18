@@ -31,6 +31,19 @@ const getMyInbox = async (req: Request, res: Response) => {
   }
 };
 
+const getSentMessages = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const result = await MessageService.getSentMessages(userId);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const getConversation = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.id;
@@ -47,5 +60,6 @@ const getConversation = async (req: Request, res: Response) => {
 export const MessageController = {
   sendMessage,
   getMyInbox,
+  getSentMessages,
   getConversation
 };
