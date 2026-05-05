@@ -44,12 +44,12 @@ importers:
       morgan:
         specifier: ^1.10.1
         version: 1.10.1
-      nikah-back-mongodb:
-        specifier: 'link:'
-        version: 'link:'
       nodemailer:
         specifier: ^8.0.5
         version: 8.0.5
+      zawajbd-backend:
+        specifier: 'link:'
+        version: 'link:'
       zod:
         specifier: ^4.3.6
         version: 4.3.6
