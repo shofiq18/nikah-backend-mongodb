@@ -61,4 +61,4 @@ router.get('/users/interests/received', auth('USER', 'ADMIN'), UserController.ge
 router.get('/users/interests/sent', auth('USER', 'ADMIN'), UserController.getSentInterests);
 
 // Also exporting under /api/ structure if mounted like this
-export const UserRoutes = router;
+export const UserRoutes: express.Router = router;

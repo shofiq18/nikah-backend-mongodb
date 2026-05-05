@@ -35,4 +35,4 @@ router.patch(
   TransactionController.rejectTransaction
 );
 
-export const TransactionRoutes = router;
+export const TransactionRoutes: express.Router = router;

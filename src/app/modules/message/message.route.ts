@@ -28,4 +28,4 @@ router.get(
   MessageController.getConversation
 );
 
-export const MessageRoutes = router;
+export const MessageRoutes: express.Router = router;
