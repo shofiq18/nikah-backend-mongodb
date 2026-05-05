@@ -47,9 +47,6 @@ importers:
       nodemailer:
         specifier: ^8.0.5
         version: 8.0.5
-      zawajbd-backend:
-        specifier: 'link:'
-        version: 'link:'
       zod:
         specifier: ^4.3.6
         version: 4.3.6

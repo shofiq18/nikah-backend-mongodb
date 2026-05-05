@@ -5,6 +5,7 @@
   "license": "ISC",
   "author": "",
   "type": "module",
+  "packageManager": "pnpm@10.29.3",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -41,7 +42,6 @@
     "http-status": "^2.1.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
-    "zawajbd-backend": "link:",
     "nodemailer": "^8.0.5",
     "zod": "^4.3.6"
   }
