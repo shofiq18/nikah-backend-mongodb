@@ -1,7 +1,8 @@
 import app from './app.js';
 import config from './config/index.js';
-import { seedSuperAdmin } from './app/utils/seed.js';
+import { seedSuperAdmin, cleanupData } from './app/utils/seed.js';
 async function bootstrap() {
+    await cleanupData();
     await seedSuperAdmin();
     let server;
     try {
