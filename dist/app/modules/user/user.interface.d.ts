@@ -56,7 +56,7 @@ export type TUpdateProfile = {
     partnerAgeMax?: number;
     partnerHeightMin?: string;
     partnerHeightMax?: string;
-    partnerMaritalStatus?: string;
+    partnerMaritalStatus?: string[];
     partnerReligions?: string;
     partnerEducation?: string;
     partnerBio?: string;

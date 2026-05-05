@@ -1,5 +1,5 @@
 {
-  "name": "nikah-back-mongodb",
+  "name": "zawajbd-backend",
   "version": "1.0.0",
   "description": "",
   "license": "ISC",
@@ -41,7 +41,7 @@
     "http-status": "^2.1.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.1",
-    "nikah-back-mongodb": "link:",
+    "zawajbd-backend": "link:",
     "nodemailer": "^8.0.5",
     "zod": "^4.3.6"
   }

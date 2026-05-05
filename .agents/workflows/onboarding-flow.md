@@ -1,8 +1,8 @@
 ---
-description: How to execute and test the NikahBD account onboarding flow
+description: How to execute and test the zawajbd account onboarding flow
 ---
 
-# NikahBD Onboarding Flow Workflow
+# zawajbd Onboarding Flow Workflow
 
 Follow these steps to successfully onboard a user and verify the progressive completion of their profile.
 

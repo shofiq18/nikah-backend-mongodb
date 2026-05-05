@@ -9,7 +9,7 @@ const registerUser = async (payload) => {
     const hashedPassword = payload.password ? await bcrypt.hash(payload.password, 12) : '';
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-    const memberId = `NKBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
+    const memberId = `ZWBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
     const result = await prisma.user.create({
         data: {
             memberId,
@@ -30,7 +30,7 @@ const registerUser = async (payload) => {
         }
     });
     await sendEmail(payload.email, `<div>
-      <h1>Welcome to NikahBD</h1>
+      <h1>Welcome to ZawajBD</h1>
       <p>Your verification OTP is: <strong>${otp}</strong></p>
       <p>This OTP will expire in 10 minutes.</p>
     </div>`);
@@ -285,7 +285,7 @@ const resendOtp = async (email) => {
         },
     });
     await sendEmail(email, `<div>
-      <h1>New Verification OTP for NikahBD</h1>
+      <h1>New Verification OTP for ZawajBD</h1>
       <p>Your new verification OTP is: <strong>${otp}</strong></p>
       <p>This OTP will expire in 10 minutes.</p>
     </div>`);

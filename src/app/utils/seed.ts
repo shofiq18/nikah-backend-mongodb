@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const seedSuperAdmin = async () => {
     try {
-        const superAdminEmail = 'admin@nikahbd.com';
+        const superAdminEmail = 'admin@zawajbd.com';
         const exists = await (prisma.user as any).findUnique({
             where: { email: superAdminEmail }
         });
@@ -14,7 +14,7 @@ export const seedSuperAdmin = async () => {
         if (!exists) {
             console.log('🌱 Seeding Super Admin...');
             const hashedPassword = await bcrypt.hash('admin123', 12);
-            
+
             await (prisma.user as any).create({
                 data: {
                     fullName: 'Systems Admin',

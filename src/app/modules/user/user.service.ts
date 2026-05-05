@@ -17,7 +17,7 @@ const registerUser = async (payload: TRegisterUser) => {
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
   // Generate unique memberId
-  const memberId = `NKBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
+  const memberId = `ZWBD${Math.floor(100000 + Math.random() * 900000).toString()}`;
 
   const result = await (prisma.user as any).create({
     data: {
@@ -43,7 +43,7 @@ const registerUser = async (payload: TRegisterUser) => {
   await sendEmail(
     payload.email,
     `<div>
-      <h1>Welcome to NikahBD</h1>
+      <h1>Welcome to ZawajBD</h1>
       <p>Your verification OTP is: <strong>${otp}</strong></p>
       <p>This OTP will expire in 10 minutes.</p>
     </div>`
@@ -360,7 +360,7 @@ const resendOtp = async (email: string) => {
   await sendEmail(
     email,
     `<div>
-      <h1>New Verification OTP for NikahBD</h1>
+      <h1>New Verification OTP for ZawajBD</h1>
       <p>Your new verification OTP is: <strong>${otp}</strong></p>
       <p>This OTP will expire in 10 minutes.</p>
     </div>`

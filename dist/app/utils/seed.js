@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 export const seedSuperAdmin = async () => {
     try {
-        const superAdminEmail = 'admin@nikahbd.com';
+        const superAdminEmail = 'admin@zawajbd.com';
         const exists = await prisma.user.findUnique({
             where: { email: superAdminEmail }
         });

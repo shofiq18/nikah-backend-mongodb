@@ -1,6 +1,6 @@
-# NikahBD API Onboarding Flow Documentation
+# zawajbd API Onboarding Flow Documentation
 
-This document explains the 8-step onboarding flow for the NikahBD platform, designed for frontend integration.
+This document explains the 8-step onboarding flow for the zawajbd platform, designed for frontend integration.
 
 **Base URL:** `http://localhost:<PORT>/api/v1`
 
