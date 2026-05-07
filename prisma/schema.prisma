@@ -55,6 +55,10 @@ model User {
   // --- Messages ---
   messagesSent      Message[] @relation("SentMessages")
   messagesReceived  Message[] @relation("ReceivedMessages")
+
+  // --- Photo Requests ---
+  photoRequestsSent     PhotoRequest[] @relation("SentPhotoRequests")
+  photoRequestsReceived PhotoRequest[] @relation("ReceivedPhotoRequests")
 }
 
 model Transaction {
@@ -139,6 +143,7 @@ model Profile {
   // --- Phase 4: Portraits ---
   // Stored as an array of uploaded image URLs (e.g., Cloudinary/AWS)
   photos           String[] @default([])
+  photoVisibility  PhotoVisibility @default(PUBLIC)
 
   // --- Phase 5: Lifestyle & Lineage ---
   weight           String?
@@ -237,4 +242,31 @@ enum InterestStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+model PhotoRequest {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  requesterId  String   @db.ObjectId
+  requester    User     @relation("SentPhotoRequests", fields: [requesterId], references: [id])
+  
+  targetUserId String   @db.ObjectId
+  targetUser   User     @relation("ReceivedPhotoRequests", fields: [targetUserId], references: [id])
+  
+  status       RequestStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([requesterId, targetUserId])
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum PhotoVisibility {
+  PUBLIC
+  PRIVATE
 }

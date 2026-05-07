@@ -210,10 +210,12 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   let hasUnlocked = null;
   let isShortlisted = false;
   let interestStatus = null;
+  let photoRequestStatus = null;
 
   if (requesterId) {
     const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
     const interestModel = (prisma as any).interest || (prisma as any).Interest;
+    const photoRequestModel = (prisma as any).photoRequest || (prisma as any).PhotoRequest;
 
     const queries: any[] = [
       prisma.contactUnlock.findUnique({
@@ -256,26 +258,46 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
       queries.push(Promise.resolve(null));
     }
 
-    const [unlockResult, shortlistResult, interestResult] = await Promise.all(queries);
+    if (photoRequestModel) {
+      queries.push(
+        photoRequestModel.findUnique({
+          where: {
+            requesterId_targetUserId: {
+              requesterId: requesterId,
+              targetUserId: targetUserId
+            }
+          }
+        })
+      );
+    } else {
+      queries.push(Promise.resolve(null));
+    }
+
+    const [unlockResult, shortlistResult, interestResult, photoReqResult] = await Promise.all(queries);
     hasUnlocked = unlockResult;
     isShortlisted = !!shortlistResult;
     interestStatus = interestResult?.status || null;
+    photoRequestStatus = photoReqResult?.status || null;
+  }
+
+  const { nidFront, nidBack, ...publicProfile } = profile;
+
+  if (publicProfile.photoVisibility === 'PRIVATE' && photoRequestStatus !== 'ACCEPTED') {
+    publicProfile.photos = [];
   }
 
   if (!hasUnlocked) {
     // Hide paywalled data securely by obfuscation or removal
-    const { nidFront, nidBack, ...publicProfile } = profile;
-
     // Obfuscate contact details instead of removing them so frontend can show blurred placeholders
     if (publicProfile.guardianMobile) publicProfile.guardianMobile = '+8801XXXXXXXXX';
     if (publicProfile.guardianEmail) publicProfile.guardianEmail = 'hidden@locked.com';
 
     const { email, ...publicUser } = userWithoutSensitiveData;
     publicUser.profile = publicProfile;
-    return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus };
+    return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus, photoRequestStatus };
   }
 
-  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted, interestStatus };
+  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted, interestStatus, photoRequestStatus };
 };
 
 const unlockContact = async (requesterId: string, targetUserId: string) => {
@@ -460,9 +482,11 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
   // Fetch user's shortlists and interests if authenticated
   let shortlistedIds: string[] = [];
   let interestStatusMap: Record<string, string> = {};
+  let photoRequestStatusMap: Record<string, string> = {};
   if (requesterId) {
     const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
     const interestModel = (prisma as any).interest || (prisma as any).Interest;
+    const photoRequestModel = (prisma as any).photoRequest || (prisma as any).PhotoRequest;
 
     if (shortlistModel) {
       const shortlists = await shortlistModel.findMany({
@@ -481,19 +505,36 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
         interestStatusMap[i.receiverId] = i.status;
       });
     }
+
+    if (photoRequestModel) {
+      const photoRequests = await photoRequestModel.findMany({
+        where: { requesterId: requesterId },
+        select: { targetUserId: true, status: true }
+      });
+      photoRequests.forEach((pr: any) => {
+        photoRequestStatusMap[pr.targetUserId] = pr.status;
+      });
+    }
   }
 
   // Omit sensitive data
   const users = result.map((user: any) => {
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
-    if (userWithoutSensitiveData.profile) {
-      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
-      userWithoutSensitiveData.profile = publicProfile;
-    }
-
+    
     // Add flags
     userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
     userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
+    userWithoutSensitiveData.photoRequestStatus = photoRequestStatusMap[user.id] || null;
+
+    if (userWithoutSensitiveData.profile) {
+      const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
+      
+      if (publicProfile.photoVisibility === 'PRIVATE' && userWithoutSensitiveData.photoRequestStatus !== 'ACCEPTED') {
+        publicProfile.photos = [];
+      }
+
+      userWithoutSensitiveData.profile = publicProfile;
+    }
 
     return userWithoutSensitiveData;
   });

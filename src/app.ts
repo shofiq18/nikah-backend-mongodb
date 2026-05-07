@@ -8,6 +8,7 @@ import notFound from "./app/middlewares/notFound.js";
 import { UserRoutes } from "./app/modules/user/user.route.js";
 import { TransactionRoutes } from "./app/modules/transaction/transaction.route.js";
 import { MessageRoutes } from "./app/modules/message/message.route.js";
+import { PhotoRequestRoutes } from "./app/modules/photoRequest/photoRequest.route.js";
 
 const app: Application = express();
 
@@ -37,6 +38,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/v1", UserRoutes);
 app.use("/api/v1/transactions", TransactionRoutes);
 app.use("/api/v1/messages", MessageRoutes);
+app.use("/api/v1/photo-requests", PhotoRequestRoutes);
 
 app.use(globalErrorHandler);
 app.use(notFound);
