@@ -225,9 +225,6 @@ const getProfile = async (requesterId, targetUserId) => {
         photoRequestStatus = photoReqResult?.status || null;
     }
     const { nidFront, nidBack, ...publicProfile } = profile;
-    if (publicProfile.photoVisibility === 'PRIVATE' && photoRequestStatus !== 'ACCEPTED') {
-        publicProfile.photos = [];
-    }
     if (!hasUnlocked) {
         if (publicProfile.guardianMobile)
             publicProfile.guardianMobile = '+8801XXXXXXXXX';
@@ -419,9 +416,6 @@ const getAllUserProfiles = async (query, requesterId) => {
         userWithoutSensitiveData.photoRequestStatus = photoRequestStatusMap[user.id] || null;
         if (userWithoutSensitiveData.profile) {
             const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
-            if (publicProfile.photoVisibility === 'PRIVATE' && userWithoutSensitiveData.photoRequestStatus !== 'ACCEPTED') {
-                publicProfile.photos = [];
-            }
             userWithoutSensitiveData.profile = publicProfile;
         }
         return userWithoutSensitiveData;

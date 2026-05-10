@@ -282,9 +282,10 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
   const { nidFront, nidBack, ...publicProfile } = profile;
 
-  if (publicProfile.photoVisibility === 'PRIVATE' && photoRequestStatus !== 'ACCEPTED') {
-    publicProfile.photos = [];
-  }
+  // Keep photos even if private so frontend can apply blur
+  // if (publicProfile.photoVisibility === 'PRIVATE' && photoRequestStatus !== 'ACCEPTED') {
+  //   publicProfile.photos = [];
+  // }
 
   if (!hasUnlocked) {
     // Hide paywalled data securely by obfuscation or removal
@@ -529,9 +530,10 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
       
-      if (publicProfile.photoVisibility === 'PRIVATE' && userWithoutSensitiveData.photoRequestStatus !== 'ACCEPTED') {
-        publicProfile.photos = [];
-      }
+      // Keep photos even if private so frontend can apply blur
+      // if (publicProfile.photoVisibility === 'PRIVATE' && userWithoutSensitiveData.photoRequestStatus !== 'ACCEPTED') {
+      //   publicProfile.photos = [];
+      // }
 
       userWithoutSensitiveData.profile = publicProfile;
     }
