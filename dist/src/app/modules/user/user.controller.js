@@ -137,6 +137,47 @@ const getAllUserProfiles = catchAsync(async (req, res) => {
         data: result,
     });
 });
+const getAllUsers = catchAsync(async (req, res) => {
+    const result = await UserService.getAllUsers(req.query);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Users fetched successfully',
+        data: result.data,
+    });
+});
+const updateNidStatus = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { nidStatus } = req.body;
+    const result = await UserService.updateNidStatus(id, nidStatus);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'NID status updated successfully',
+        data: result,
+    });
+});
+const blockUser = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const result = await UserService.blockUser(id, status);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'User status updated successfully',
+        data: result,
+    });
+});
+const deleteUser = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await UserService.deleteUser(id);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'User deleted successfully',
+        data: result,
+    });
+});
 const getMe = catchAsync(async (req, res) => {
     const user = req.user;
     const result = await UserService.getMe(user.id);
@@ -239,6 +280,10 @@ export const UserController = {
     updateProfile,
     getProfile,
     getAllUserProfiles,
+    getAllUsers,
+    updateNidStatus,
+    blockUser,
+    deleteUser,
     unlockContact,
     toggleShortlist,
     getShortlistedProfiles,

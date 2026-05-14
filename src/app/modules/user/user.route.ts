@@ -38,6 +38,12 @@ router.get(
   UserController.getMe
 );
 
+router.get(
+  '/auth/users',
+  auth('ADMIN'),
+  UserController.getAllUsers
+);
+
 router.patch(
   '/users/profile',
   auth('USER', 'ADMIN'),
@@ -49,6 +55,11 @@ router.patch(
 router.get('/users/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
 router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockContact);
+
+// Admin Only - User Management
+router.patch('/users/:id/block', auth('ADMIN'), UserController.blockUser);
+router.patch('/users/:id/nid-status', auth('ADMIN'), UserController.updateNidStatus);
+router.delete('/users/:id', auth('ADMIN'), UserController.deleteUser);
 
 // Shortlist Routes
 router.post('/users/:id/shortlist', auth('USER', 'ADMIN'), UserController.toggleShortlist);

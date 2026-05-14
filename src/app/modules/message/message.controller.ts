@@ -57,9 +57,24 @@ const getConversation = async (req: Request, res: Response) => {
     }
 };
 
+const deleteConversation = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+        const otherUserId = req.params.otherUserId as string;
+        await MessageService.deleteConversation(userId, otherUserId);
+        res.status(200).json({
+            success: true,
+            message: 'Conversation deleted successfully'
+        });
+    } catch (error: any) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
 export const MessageController = {
   sendMessage,
   getMyInbox,
   getSentMessages,
-  getConversation
+  getConversation,
+  deleteConversation
 };

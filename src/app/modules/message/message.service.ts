@@ -92,10 +92,22 @@ const markAsRead = async (messageId: string) => {
     });
 };
 
+const deleteConversation = async (userId: string, otherUserId: string) => {
+    return await (prisma as any).message.deleteMany({
+        where: {
+            OR: [
+                { senderId: userId, receiverId: otherUserId },
+                { senderId: otherUserId, receiverId: userId }
+            ]
+        }
+    });
+};
+
 export const MessageService = {
   sendMessage,
   getMyInbox,
   getSentMessages,
   getConversation,
-  markAsRead
+  markAsRead,
+  deleteConversation
 };

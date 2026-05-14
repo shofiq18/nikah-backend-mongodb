@@ -50,6 +50,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 import { uploadToCloudinary } from '../../utils/cloudinary.js';
+import { NidStatus, UserStatus } from '@prisma/client';
 
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?.id || req.body.userId;
@@ -97,7 +98,7 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
 const getProfile = catchAsync(async (req: Request, res: Response) => {
   const targetUserId = req.params.id as string;
-  const requesterId = (req as any).user?.id; 
+  const requesterId = (req as any).user?.id;
 
   const result = await UserService.getProfile(requesterId, targetUserId);
 
@@ -173,6 +174,55 @@ const getAllUserProfiles = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: 'User profiles fetched successfully',
+    data: result,
+  });
+});
+
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUsers(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Users fetched successfully',
+    data: result.data, // Send only the array to fix frontend filter error
+  });
+});
+
+const updateNidStatus = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { nidStatus } = req.body;
+  const result = await UserService.updateNidStatus(id as string, nidStatus as NidStatus);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'NID status updated successfully',
+    data: result,
+  });
+});
+
+const blockUser = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const result = await UserService.blockUser(id as string, status as UserStatus);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User status updated successfully',
+    data: result,
+  });
+});
+
+const deleteUser = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserService.deleteUser(id as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User deleted successfully',
     data: result,
   });
 });
@@ -295,6 +345,10 @@ export const UserController = {
   updateProfile,
   getProfile,
   getAllUserProfiles,
+  getAllUsers,
+  updateNidStatus,
+  blockUser,
+  deleteUser,
   unlockContact,
   toggleShortlist,
   getShortlistedProfiles,

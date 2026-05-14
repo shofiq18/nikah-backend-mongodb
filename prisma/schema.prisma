@@ -31,6 +31,7 @@ model User {
   onboardingStep   Int      @default(1)
 
   // System Flags
+  status           UserStatus @default(Active)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -178,6 +179,7 @@ model Profile {
   nidFront         String?
   nidBack          String?
   isNidVerified    Boolean @default(false)
+  nidStatus        NidStatus @default(NONE)
 }
 
 // Tracks which user spent a connection to unlock whose guardian details
@@ -212,6 +214,11 @@ model Interest {
   updatedAt    DateTime @updatedAt
 
   @@unique([senderId, receiverId])
+}
+
+enum UserStatus {
+  Active
+  Banned
 }
 
 enum Role {
@@ -269,4 +276,11 @@ enum RequestStatus {
 enum PhotoVisibility {
   PUBLIC
   PRIVATE
+}
+
+enum NidStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
 }

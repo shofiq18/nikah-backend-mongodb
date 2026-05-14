@@ -28,4 +28,10 @@ router.get(
   MessageController.getConversation
 );
 
+router.delete(
+  '/conversation/:otherUserId',
+  auth('USER', 'ADMIN'),
+  MessageController.deleteConversation
+);
+
 export const MessageRoutes: express.Router = router;

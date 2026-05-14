@@ -73,11 +73,22 @@ const markAsRead = async (messageId) => {
         data: { isRead: true }
     });
 };
+const deleteConversation = async (userId, otherUserId) => {
+    return await prisma.message.deleteMany({
+        where: {
+            OR: [
+                { senderId: userId, receiverId: otherUserId },
+                { senderId: otherUserId, receiverId: userId }
+            ]
+        }
+    });
+};
 export const MessageService = {
     sendMessage,
     getMyInbox,
     getSentMessages,
     getConversation,
-    markAsRead
+    markAsRead,
+    deleteConversation
 };
 //# sourceMappingURL=message.service.js.map

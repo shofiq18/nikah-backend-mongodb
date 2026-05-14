@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { InterestStatus, NidStatus, PrismaClient, UserStatus } from '@prisma/client';
 import { TLoginUser, TRegisterUser, TUpdateProfile } from './user.interface.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -392,6 +392,78 @@ const resendOtp = async (email: string) => {
   return { message: 'OTP resent successfully' };
 };
 
+const getAllUsers = async (query: Record<string, any>) => {
+  const { searchTerm, role, planType, nidStatus, hasTokens, limit, page } = query;
+  
+  const where: any = {};
+  if (searchTerm) {
+    where.OR = [
+      { fullName: { contains: searchTerm, mode: 'insensitive' } },
+      { email: { contains: searchTerm, mode: 'insensitive' } },
+      { memberId: { contains: searchTerm, mode: 'insensitive' } }
+    ];
+  }
+  if (role) where.role = role;
+  if (planType) where.planType = planType;
+  if (nidStatus) {
+    where.profile = { nidStatus };
+  }
+  if (hasTokens === 'true') {
+    where.availableTokens = { gt: 0 };
+  }
+
+  // If no pagination is provided, fetch all
+  const queryOptions: any = {
+    where,
+    include: { profile: true },
+    orderBy: { createdAt: 'desc' }
+  };
+
+  if (limit && page) {
+    queryOptions.skip = (Number(page) - 1) * Number(limit);
+    queryOptions.take = Number(limit);
+  }
+
+  const result = await (prisma.user as any).findMany(queryOptions);
+  const total = await (prisma.user as any).count({ where });
+
+  return {
+    meta: {
+      total,
+      page: Number(page || 1),
+      limit: Number(limit || total)
+    },
+    data: result
+  };
+};
+
+const updateNidStatus = async (id: string, nidStatus: NidStatus) => {
+  return await (prisma.user as any).update({
+    where: { id },
+    data: {
+      profile: {
+        update: {
+          nidStatus,
+          isNidVerified: nidStatus === 'APPROVED'
+        }
+      }
+    }
+  });
+};
+
+const blockUser = async (id: string, status: UserStatus) => {
+  return await (prisma.user as any).update({
+    where: { id },
+    data: { status }
+  });
+};
+
+const deleteUser = async (id: string) => {
+  return await (prisma.user as any).delete({
+    where: { id }
+  });
+};
+
 const getAllUserProfiles = async (query: Record<string, any>, requesterId?: string) => {
   const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
   const {
@@ -516,6 +588,12 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
         photoRequestStatusMap[pr.targetUserId] = pr.status;
       });
     }
+
+    const unlockedContacts = await prisma.contactUnlock.findMany({
+      where: { unlockedById: requesterId },
+      select: { targetUserId: true }
+    });
+    var unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
   }
 
   // Omit sensitive data
@@ -526,6 +604,7 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
     userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
     userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
     userWithoutSensitiveData.photoRequestStatus = photoRequestStatusMap[user.id] || null;
+    userWithoutSensitiveData.isUnlocked = (unlockedIds || []).includes(user.id);
 
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
@@ -623,12 +702,50 @@ const getShortlistedProfiles = async (userId: string) => {
           profile: true
         }
       }
-    }
+    },
+    orderBy: { createdAt: 'desc' }
   });
+
+  const unlockedContacts = await prisma.contactUnlock.findMany({
+    where: { unlockedById: userId },
+    select: { targetUserId: true }
+  });
+  const unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
+
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+  const photoRequestModel = (prisma as any).photoRequest || (prisma as any).PhotoRequest;
+
+  let interestStatusMap: Record<string, string> = {};
+  let photoRequestStatusMap: Record<string, string> = {};
+
+  if (interestModel) {
+    const interests = await interestModel.findMany({
+      where: { senderId: userId },
+      select: { receiverId: true, status: true }
+    });
+    interests.forEach((i: any) => {
+      interestStatusMap[i.receiverId] = i.status;
+    });
+  }
+
+  if (photoRequestModel) {
+    const photoRequests = await photoRequestModel.findMany({
+      where: { requesterId: userId },
+      select: { targetUserId: true, status: true }
+    });
+    photoRequests.forEach((pr: any) => {
+      photoRequestStatusMap[pr.targetUserId] = pr.status;
+    });
+  }
 
   const profiles = result.map((item: any) => {
     const user = item.targetUser;
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    userWithoutSensitiveData.isUnlocked = unlockedIds.includes(user.id);
+    userWithoutSensitiveData.isShortlisted = true;
+    userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
+    userWithoutSensitiveData.photoRequestStatus = photoRequestStatusMap[user.id] || null;
+
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
       userWithoutSensitiveData.profile = publicProfile;
@@ -664,7 +781,7 @@ const sendInterest = async (senderId: string, receiverId: string) => {
   return result;
 };
 
-const handleInterestResponse = async (userId: string, interestId: string, status: 'ACCEPTED' | 'REJECTED') => {
+const handleInterestResponse = async (userId: string, interestId: string, status: InterestStatus) => {
   const interestModel = (prisma as any).interest || (prisma as any).Interest;
 
   const interest = await interestModel.findUnique({
@@ -698,9 +815,16 @@ const getReceivedInterests = async (userId: string) => {
     orderBy: { createdAt: 'desc' }
   });
 
+  const unlockedContacts = await prisma.contactUnlock.findMany({
+    where: { unlockedById: userId },
+    select: { targetUserId: true }
+  });
+  const unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
+
   return result.map((item: any) => {
     const user = item.sender;
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    userWithoutSensitiveData.isUnlocked = unlockedIds.includes(user.id);
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
       userWithoutSensitiveData.profile = publicProfile;
@@ -727,9 +851,16 @@ const getSentInterests = async (userId: string) => {
     orderBy: { createdAt: 'desc' }
   });
 
+  const unlockedContacts = await prisma.contactUnlock.findMany({
+    where: { unlockedById: userId },
+    select: { targetUserId: true }
+  });
+  const unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
+
   return result.map((item: any) => {
     const user = item.receiver;
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+    userWithoutSensitiveData.isUnlocked = unlockedIds.includes(user.id);
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
       userWithoutSensitiveData.profile = publicProfile;
@@ -750,6 +881,10 @@ export const UserService = {
   updateProfile,
   getProfile,
   getAllUserProfiles,
+  getAllUsers,
+  updateNidStatus,
+  blockUser,
+  deleteUser,
   unlockContact,
   toggleShortlist,
   getShortlistedProfiles,
