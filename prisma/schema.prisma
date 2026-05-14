@@ -31,7 +31,7 @@ model User {
   onboardingStep   Int      @default(1)
 
   // System Flags
-  status           UserStatus @default(Active)
+  status           UserStatus? @default(Active)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -219,6 +219,7 @@ model Interest {
 enum UserStatus {
   Active
   Banned
+  Deleted
 }
 
 enum Role {

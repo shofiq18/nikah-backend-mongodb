@@ -308,8 +308,10 @@ const resendOtp = async (email) => {
     return { message: 'OTP resent successfully' };
 };
 const getAllUsers = async (query) => {
-    const { searchTerm, role, planType, nidStatus, hasTokens, limit, page } = query;
+    const { searchTerm, role, planType, nidStatus, hasTokens, limit, page, status } = query;
     const where = {};
+    if (status)
+        where.status = status;
     if (searchTerm) {
         where.OR = [
             { fullName: { contains: searchTerm, mode: 'insensitive' } },
@@ -367,14 +369,32 @@ const blockUser = async (id, status) => {
     });
 };
 const deleteUser = async (id) => {
-    return await prisma.user.delete({
-        where: { id }
+    return await prisma.user.update({
+        where: { id },
+        data: { status: 'Deleted' }
     });
 };
 const getAllUserProfiles = async (query, requesterId) => {
     const { page, limit, skip, sortBy, sortOrder } = QueryHelpers.calculatePagination(query);
     const { maritalStatus, gender, country, division, district, subDistrict, minAge, maxAge, highestEducation, religion, profileFor, searchTerm } = query;
-    const where = { role: 'USER' };
+    try {
+        await prisma.$runCommandRaw({
+            update: "User",
+            updates: [
+                {
+                    q: { status: { $exists: false } },
+                    u: { $set: { status: "Active" } },
+                    multi: true
+                }
+            ]
+        });
+    }
+    catch (e) {
+    }
+    const where = {
+        role: 'USER',
+        status: 'Active'
+    };
     if (profileFor)
         where.profileFor = profileFor;
     let oppositeGender;
@@ -388,10 +408,14 @@ const getAllUserProfiles = async (query, requesterId) => {
         }
     }
     if (searchTerm) {
-        where.OR = [
-            { fullName: { contains: searchTerm, mode: 'insensitive' } },
-            { email: { contains: searchTerm, mode: 'insensitive' } },
-            { memberId: { contains: searchTerm, mode: 'insensitive' } },
+        where.AND = [
+            {
+                OR: [
+                    { fullName: { contains: searchTerm, mode: 'insensitive' } },
+                    { email: { contains: searchTerm, mode: 'insensitive' } },
+                    { memberId: { contains: searchTerm, mode: 'insensitive' } },
+                ]
+            }
         ];
     }
     const profileFilters = {};

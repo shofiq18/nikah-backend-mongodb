@@ -393,9 +393,10 @@ const resendOtp = async (email: string) => {
 };
 
 const getAllUsers = async (query: Record<string, any>) => {
-  const { searchTerm, role, planType, nidStatus, hasTokens, limit, page } = query;
-  
+  const { searchTerm, role, planType, nidStatus, hasTokens, limit, page, status } = query;
+
   const where: any = {};
+  if (status) where.status = status;
   if (searchTerm) {
     where.OR = [
       { fullName: { contains: searchTerm, mode: 'insensitive' } },
@@ -459,8 +460,9 @@ const blockUser = async (id: string, status: UserStatus) => {
 };
 
 const deleteUser = async (id: string) => {
-  return await (prisma.user as any).delete({
-    where: { id }
+  return await (prisma.user as any).update({
+    where: { id },
+    data: { status: 'Deleted' }
   });
 };
 
@@ -481,7 +483,28 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
     searchTerm
   } = query;
 
-  const where: any = { role: 'USER' };
+  // --- AUTOMATIC DATABASE MIGRATION ---
+  // Fix older MongoDB documents that are missing the status field
+  try {
+    await prisma.$runCommandRaw({
+      update: "User",
+      updates: [
+        {
+          q: { status: { $exists: false } },
+          u: { $set: { status: "Active" } },
+          multi: true
+        }
+      ]
+    });
+  } catch (e) {
+    // Ignore if raw commands are not supported
+  }
+  // ------------------------------------
+
+  const where: any = {
+    role: 'USER',
+    status: 'Active'
+  };
 
   // Base filters for User model
   if (profileFor) where.profileFor = profileFor;
@@ -500,10 +523,14 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
 
   // Search term (fullName or email or memberId)
   if (searchTerm) {
-    where.OR = [
-      { fullName: { contains: searchTerm, mode: 'insensitive' } },
-      { email: { contains: searchTerm, mode: 'insensitive' } },
-      { memberId: { contains: searchTerm, mode: 'insensitive' } },
+    where.AND = [
+      {
+        OR: [
+          { fullName: { contains: searchTerm, mode: 'insensitive' } },
+          { email: { contains: searchTerm, mode: 'insensitive' } },
+          { memberId: { contains: searchTerm, mode: 'insensitive' } },
+        ]
+      }
     ];
   }
 
@@ -599,7 +626,7 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
   // Omit sensitive data
   const users = result.map((user: any) => {
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
-    
+
     // Add flags
     userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
     userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
@@ -608,7 +635,7 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
 
     if (userWithoutSensitiveData.profile) {
       const { guardianMobile, guardianEmail, nidFront, nidBack, ...publicProfile } = userWithoutSensitiveData.profile;
-      
+
       // Keep photos even if private so frontend can apply blur
       // if (publicProfile.photoVisibility === 'PRIVATE' && userWithoutSensitiveData.photoRequestStatus !== 'ACCEPTED') {
       //   publicProfile.photos = [];
