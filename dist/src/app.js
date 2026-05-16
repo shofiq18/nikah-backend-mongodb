@@ -26,7 +26,8 @@ app.get("/", (req, res) => {
         timeStamp: new Date().toISOString(),
     });
 });
-app.use("/api/v1", UserRoutes);
+app.use("/api/v1/auth", UserRoutes);
+app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/notifications", NotificationRoutes);
 app.use("/api/v1/transactions", TransactionRoutes);
 app.use("/api/v1/messages", MessageRoutes);

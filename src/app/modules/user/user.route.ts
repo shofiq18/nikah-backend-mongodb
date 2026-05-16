@@ -1,75 +1,41 @@
 import express from 'express';
 import { UserController } from './user.controller.js';
 import auth from '../../middlewares/auth.js';
-import { UserValidation } from './user.validation.js';
-import validateRequest from '../../middlewares/validateRequest.js';
 
 const router = express.Router();
 
-// Public routes
-router.post(
-  '/auth/register',
-  validateRequest(UserValidation.registerValidationSchema),
-  UserController.registerUser
-);
-router.post(
-  '/auth/login',
-  validateRequest(UserValidation.loginValidationSchema),
-  UserController.loginUser
-);
-router.post(
-  '/auth/logout',
-  UserController.logout
-);
-router.post(
-  '/auth/verify-email',
-  validateRequest(UserValidation.verifyEmailValidationSchema),
-  UserController.verifyEmail
-);
-router.post(
-  '/auth/resend-otp',
-  UserController.resendOtp
-);
+// Auth routes (Mounted at /api/v1/auth)
+router.post('/register', UserController.registerUser);
+router.post('/login', UserController.loginUser);
+router.post('/verify-email', UserController.verifyEmail);
+router.post('/resend-otp', UserController.resendOtp);
+router.get('/me', auth('USER', 'ADMIN', 'MODERATOR'), UserController.getMe);
+router.post('/logout', UserController.logout);
 
-// Protected routes
-router.get(
-  '/auth/me',
-  auth('USER', 'ADMIN'),
-  UserController.getMe
-);
+// User Profile routes (Mounted at /api/v1/users)
+router.patch('/profile', auth('USER'), UserController.updateProfile);
+router.get('/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
+router.get('/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 
-router.get(
-  '/auth/users',
-  auth('ADMIN'),
-  UserController.getAllUsers
-);
+// Admin routes
+router.get('/all-users', auth('ADMIN'), UserController.getAllUsers);
+router.patch('/:id/nid-status', auth('ADMIN'), UserController.updateNidStatus);
+router.patch('/:id/block', auth('ADMIN'), UserController.blockUser);
+router.delete('/:id', auth('ADMIN'), UserController.deleteUser);
 
-router.patch(
-  '/users/profile',
-  auth('USER', 'ADMIN'),
-  validateRequest(UserValidation.updateProfileValidationSchema),
-  UserController.updateProfile
-);
+// Interactions
+router.post('/:id/unlock', auth('USER'), UserController.unlockContact);
+router.post('/:id/shortlist', auth('USER'), UserController.toggleShortlist);
+router.get('/shortlisted', auth('USER'), UserController.getShortlistedProfiles);
 
+// Interests
+router.post('/:id/interest', auth('USER'), UserController.sendInterest);
+router.patch('/interests/:interestId', auth('USER'), UserController.handleInterestResponse);
+router.get('/interests/received', auth('USER'), UserController.getReceivedInterests);
+router.get('/interests/sent', auth('USER'), UserController.getSentInterests);
 
-router.get('/users/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
-router.get('/users/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
-router.post('/users/:id/unlock', auth('USER', 'ADMIN'), UserController.unlockContact);
+// Matches & Premium
+router.get('/matches', auth('USER'), UserController.getMatches);
+router.get('/get-premium', auth('USER', 'ADMIN'), UserController.getPremiumMembers);
 
-// Admin Only - User Management
-router.patch('/users/:id/block', auth('ADMIN'), UserController.blockUser);
-router.patch('/users/:id/nid-status', auth('ADMIN'), UserController.updateNidStatus);
-router.delete('/users/:id', auth('ADMIN'), UserController.deleteUser);
-
-// Shortlist Routes
-router.post('/users/:id/shortlist', auth('USER', 'ADMIN'), UserController.toggleShortlist);
-router.get('/users/shortlisted', auth('USER', 'ADMIN'), UserController.getShortlistedProfiles);
-
-// Interest Routes
-router.post('/users/:id/interest', auth('USER', 'ADMIN'), UserController.sendInterest);
-router.patch('/users/interests/:interestId', auth('USER', 'ADMIN'), UserController.handleInterestResponse);
-router.get('/users/interests/received', auth('USER', 'ADMIN'), UserController.getReceivedInterests);
-router.get('/users/interests/sent', auth('USER', 'ADMIN'), UserController.getSentInterests);
-
-// Also exporting under /api/ structure if mounted like this
-export const UserRoutes: express.Router = router;
+export const UserRoutes = router;

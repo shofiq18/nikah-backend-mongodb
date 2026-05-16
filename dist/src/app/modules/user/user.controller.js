@@ -3,6 +3,7 @@ import catchAsync from '../../utils/catchAsync.js';
 import sendResponse from '../../utils/sendResponse.js';
 import { UserService } from './user.service.js';
 import config from '../../../config/index.js';
+import { uploadToCloudinary } from '../../utils/cloudinary.js';
 const registerUser = catchAsync(async (req, res) => {
     const result = await UserService.registerUser(req.body);
     const { accessToken, user } = result;
@@ -41,7 +42,6 @@ const loginUser = catchAsync(async (req, res) => {
         },
     });
 });
-import { uploadToCloudinary } from '../../utils/cloudinary.js';
 const updateProfile = catchAsync(async (req, res) => {
     const userId = req.user?.id || req.body.userId;
     if (!userId) {
@@ -270,6 +270,28 @@ const getSentInterests = catchAsync(async (req, res) => {
         data: result,
     });
 });
+const getMatches = catchAsync(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId)
+        throw new Error('User not authenticated');
+    const result = await UserService.getMatches(userId);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Matches fetched successfully',
+        data: result,
+    });
+});
+const getPremiumMembers = catchAsync(async (req, res) => {
+    const requesterId = req.user?.id;
+    const result = await UserService.getPremiumMembers(req.query, requesterId);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Premium members fetched successfully',
+        data: result,
+    });
+});
 export const UserController = {
     loginUser,
     getMe,
@@ -290,6 +312,8 @@ export const UserController = {
     sendInterest,
     handleInterestResponse,
     getReceivedInterests,
-    getSentInterests
+    getSentInterests,
+    getMatches,
+    getPremiumMembers
 };
 //# sourceMappingURL=user.controller.js.map

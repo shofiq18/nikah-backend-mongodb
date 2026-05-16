@@ -4,6 +4,8 @@ import catchAsync from '../../utils/catchAsync.js';
 import sendResponse from '../../utils/sendResponse.js';
 import { UserService } from './user.service.js';
 import config from '../../../config/index.js';
+import { uploadToCloudinary } from '../../utils/cloudinary.js';
+import { NidStatus, UserStatus } from '@prisma/client';
 
 const registerUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.registerUser(req.body);
@@ -49,9 +51,6 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-import { uploadToCloudinary } from '../../utils/cloudinary.js';
-import { NidStatus, UserStatus } from '@prisma/client';
-
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?.id || req.body.userId;
 
@@ -59,11 +58,9 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
     throw new Error('User ID is required for profile update');
   }
 
-  // Create a copy of the body and remove userId to avoid Prisma updating the relation field
   const updateData = { ...req.body };
   delete updateData.userId;
 
-  // Handle Photos upload if present
   if (updateData.photos && Array.isArray(updateData.photos)) {
     const uploadedPhotos = await Promise.all(
       updateData.photos.map(async (photo: string) => {
@@ -76,12 +73,10 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
     updateData.photos = uploadedPhotos;
   }
 
-  // Handle NID Front upload if present
   if (updateData.nidFront && updateData.nidFront.startsWith('data:image/')) {
     updateData.nidFront = await uploadToCloudinary(updateData.nidFront, `${userId}/security`);
   }
 
-  // Handle NID Back upload if present
   if (updateData.nidBack && updateData.nidBack.startsWith('data:image/')) {
     updateData.nidBack = await uploadToCloudinary(updateData.nidBack, `${userId}/security`);
   }
@@ -152,10 +147,8 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
 const resendOtp = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
-
   const result = await UserService.resendOtp(email);
 
   sendResponse(res, {
@@ -185,7 +178,7 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Users fetched successfully',
-    data: result.data, // Send only the array to fix frontend filter error
+    data: result.data,
   });
 });
 
@@ -335,6 +328,29 @@ const getSentInterests = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMatches = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const result = await UserService.getMatches(userId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Matches fetched successfully',
+    data: result,
+  });
+});
+
+const getPremiumMembers = catchAsync(async (req: Request, res: Response) => {
+  const requesterId = (req as any).user?.id;
+  const result = await UserService.getPremiumMembers(req.query, requesterId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Premium members fetched successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   loginUser,
   getMe,
@@ -355,6 +371,7 @@ export const UserController = {
   sendInterest,
   handleInterestResponse,
   getReceivedInterests,
-  getSentInterests
+  getSentInterests,
+  getMatches,
+  getPremiumMembers
 };
-

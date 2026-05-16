@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import config from '../../../config/index.js';
 import { sendEmail } from '../../utils/sendEmail.js';
 import { QueryHelpers } from '../../utils/queryHelpers.js';
+import { calculateMatchScore } from '../../utils/match-logic.js';
 
 const prisma = new PrismaClient();
 
@@ -211,7 +212,7 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   // Record Profile View and Create Notification if requester is different from owner
   if (requesterId) {
     const profileViewModel = (prisma as any).profileView || (prisma as any).ProfileView;
-    
+
     if (profileViewModel) {
       // 1. Check for existing view to see when they last visited
       const existingView = await profileViewModel.findUnique({
@@ -225,7 +226,7 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
       const now = new Date();
       const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
-      
+
       // Determine if we should send a notification
       // (Only if first time OR last view was more than 1 hour ago)
       const shouldNotify = !existingView || (now.getTime() - new Date(existingView.lastViewedAt).getTime() > ONE_HOUR);
@@ -268,8 +269,21 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
 
   let hasUnlocked = null;
+  let matchScore = 0;
+
+  if (requesterId) {
+    // Calculate match score for the details page visualization
+    const requester = await (prisma.user as any).findUnique({
+      where: { id: requesterId },
+      include: { profile: true }
+    });
+    if (requester?.profile && user.profile) {
+      matchScore = calculateMatchScore(requester.profile, user.profile);
+    }
+  }
 
   let isShortlisted = false;
+
   let interestStatus = null;
   let photoRequestStatus = null;
 
@@ -356,11 +370,12 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
 
     const { email, ...publicUser } = userWithoutSensitiveData;
     publicUser.profile = publicProfile;
-    return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus, photoRequestStatus };
+    return { ...publicUser, isUnlocked: false, isShortlisted, interestStatus, photoRequestStatus, matchScore };
   }
 
-  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted, interestStatus, photoRequestStatus };
+  return { ...userWithoutSensitiveData, isUnlocked: true, isShortlisted, interestStatus, photoRequestStatus, matchScore };
 };
+
 
 const unlockContact = async (requesterId: string, targetUserId: string) => {
   const user = await (prisma.user as any).findUnique({ where: { id: requesterId } });
@@ -997,7 +1012,233 @@ const getSentInterests = async (userId: string) => {
   });
 };
 
+const getMatches = async (userId: string) => {
+  // 1. Get the current user with their profile
+  const currentUser = await (prisma.user as any).findUnique({
+    where: { id: userId },
+    include: { profile: true }
+  });
+
+  if (!currentUser || !currentUser.profile) {
+    throw new Error('User profile not found. Please complete your profile to see matches.');
+  }
+
+  const { gender } = currentUser.profile;
+
+  // 2. Fetch potential candidates
+  const candidates = await (prisma.user as any).findMany({
+    where: {
+      id: { not: userId },
+      status: 'Active',
+      profile: {
+        gender: {
+          equals: gender?.toUpperCase() === 'MALE' ? 'FEMALE' : 'MALE',
+          mode: 'insensitive'
+        }
+      }
+
+    },
+    include: {
+      profile: true
+    }
+  });
+
+  // Fetch interactions (shortlists, interests, photo requests, unlocks)
+  let shortlistedIds: string[] = [];
+  let interestStatusMap: Record<string, string> = {};
+  let photoRequestStatusMap: Record<string, string> = {};
+  let unlockedIds: string[] = [];
+
+  const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+  const interestModel = (prisma as any).interest || (prisma as any).Interest;
+  const photoRequestModel = (prisma as any).photoRequest || (prisma as any).PhotoRequest;
+
+  if (shortlistModel) {
+    const shortlists = await shortlistModel.findMany({
+      where: { userId },
+      select: { targetUserId: true }
+    });
+    shortlistedIds = shortlists.map((s: any) => s.targetUserId);
+  }
+
+  if (interestModel) {
+    const interests = await interestModel.findMany({
+      where: { senderId: userId },
+      select: { receiverId: true, status: true }
+    });
+    interests.forEach((i: any) => {
+      interestStatusMap[i.receiverId] = i.status;
+    });
+  }
+
+  if (photoRequestModel) {
+    const photoRequests = await photoRequestModel.findMany({
+      where: { requesterId: userId },
+      select: { targetUserId: true, status: true }
+    });
+    photoRequests.forEach((pr: any) => {
+      photoRequestStatusMap[pr.targetUserId] = pr.status;
+    });
+  }
+
+  const unlockedContacts = await prisma.contactUnlock.findMany({
+    where: { unlockedById: userId },
+    select: { targetUserId: true }
+  });
+  unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
+
+  // 3. Calculate scores
+  const results = await Promise.all(candidates.map(async (candidate: any) => {
+    // MIGRATION: Auto-update to 'Islam' if needed
+    if (candidate.profile.religion !== 'Islam') {
+      await (prisma.profile as any).update({
+        where: { userId: candidate.id },
+        data: { religion: 'Islam' }
+      });
+      candidate.profile.religion = 'Islam';
+    }
+
+    const score = calculateMatchScore(currentUser.profile, candidate.profile);
+
+    return {
+      userId: candidate.id,
+      memberId: candidate.memberId,
+      fullName: candidate.fullName,
+      matchScore: score,
+      age: candidate.profile.age,
+      division: candidate.profile.division,
+      district: candidate.profile.district,
+      religion: candidate.profile.religion,
+      maritalStatus: candidate.profile.maritalStatus,
+      occupation: candidate.profile.occupation,
+      highestEducation: candidate.profile.highestEducation,
+      height: candidate.profile.height,
+      photo: candidate.profile.photos?.[0] || null,
+      isShortlisted: shortlistedIds.includes(candidate.id),
+      interestStatus: interestStatusMap[candidate.id] || null,
+      photoRequestStatus: photoRequestStatusMap[candidate.id] || null,
+      isUnlocked: unlockedIds.includes(candidate.id)
+    };
+  }));
+
+  // DEBUG: Get some counts
+  const totalUsers = await (prisma.user as any).count();
+  const oppositeGender = gender?.toUpperCase() === 'MALE' ? 'FEMALE' : 'MALE';
+
+  // 4. Filter and Sort (0% Threshold for debugging)
+  const filteredMatches = results
+    .filter(m => m.matchScore >= 0)
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+  return {
+    total: filteredMatches.length,
+    matches: filteredMatches,
+    debug: {
+      totalUsersInDb: totalUsers,
+      currentUserGender: gender,
+      targetGender: oppositeGender,
+      candidatesFound: candidates.length
+    }
+  };
+
+
+};
+
+const getPremiumMembers = async (params: any, requesterId: string | undefined) => {
+  const { limit = 10, page = 1, gender } = params;
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const where: any = {
+    status: 'Active',
+    planType: { in: ['GOLD', 'DIAMOND', 'PLATINUM'] }
+  };
+
+  if (gender) {
+    where.profile = {
+      gender: {
+        equals: gender,
+        mode: 'insensitive'
+      }
+    };
+  }
+
+
+  const users = await (prisma.user as any).findMany({
+    where,
+    include: { profile: true },
+    take: Number(limit),
+    skip: Number(skip),
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const total = await (prisma.user as any).count({ where });
+
+  // Map interactions if requester is logged in
+  let shortlistedIds: string[] = [];
+  let interestStatusMap: Record<string, string> = {};
+  let photoRequestStatusMap: Record<string, string> = {};
+  let unlockedIds: string[] = [];
+
+  if (requesterId) {
+    const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
+    const interestModel = (prisma as any).interest || (prisma as any).Interest;
+    const photoRequestModel = (prisma as any).photoRequest || (prisma as any).PhotoRequest;
+
+    if (shortlistModel) {
+      const shortlists = await shortlistModel.findMany({
+        where: { userId: requesterId },
+        select: { targetUserId: true }
+      });
+      shortlistedIds = shortlists.map((s: any) => s.targetUserId);
+    }
+
+    if (interestModel) {
+      const interests = await interestModel.findMany({
+        where: { senderId: requesterId },
+        select: { receiverId: true, status: true }
+      });
+      interests.forEach((i: any) => {
+        interestStatusMap[i.receiverId] = i.status;
+      });
+    }
+
+    if (photoRequestModel) {
+      const photoRequests = await photoRequestModel.findMany({
+        where: { requesterId: requesterId },
+        select: { targetUserId: true, status: true }
+      });
+      photoRequests.forEach((pr: any) => {
+        photoRequestStatusMap[pr.targetUserId] = pr.status;
+      });
+    }
+
+    const unlockedContacts = await prisma.contactUnlock.findMany({
+      where: { unlockedById: requesterId },
+      select: { targetUserId: true }
+    });
+    unlockedIds = unlockedContacts.map((uc: any) => uc.targetUserId);
+  }
+
+  const sanitizedUsers = users.map((user: any) => {
+    const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
+
+    // Attach statuses
+    userWithoutSensitiveData.isShortlisted = shortlistedIds.includes(user.id);
+    userWithoutSensitiveData.interestStatus = interestStatusMap[user.id] || null;
+    userWithoutSensitiveData.photoRequestStatus = photoRequestStatusMap[user.id] || null;
+    userWithoutSensitiveData.isUnlocked = unlockedIds.includes(user.id);
+
+    return userWithoutSensitiveData;
+  });
+
+  return {
+    meta: { page: Number(page), limit: Number(limit), total },
+    data: sanitizedUsers
+  };
+};
+
 export const UserService = {
+
   loginUser,
   getMe,
   registerUser,
@@ -1016,5 +1257,9 @@ export const UserService = {
   sendInterest,
   handleInterestResponse,
   getReceivedInterests,
-  getSentInterests
+  getSentInterests,
+  getMatches,
+  getPremiumMembers
 };
+
+
