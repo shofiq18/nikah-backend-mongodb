@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { NotificationService } from '../notification/notification.service.js';
 const prisma = new PrismaClient();
 const SUBSCRIPTION_PLANS = {
     'Gold (3 Months)': { durationMonths: 3, contactLimit: 40, type: 'GOLD' },
@@ -77,12 +78,26 @@ const approveTransaction = async (transactionId) => {
         })
     ]);
     console.log(`[Transaction] Update successful. New balance in DB: ${result[1].availableTokens}`);
+    await NotificationService.createNotification({
+        userId: userId,
+        type: 'PAYMENT_SUCCESS',
+        title: 'Payment Successful',
+        message: `Your payment for ${transaction.packageName} has been approved.`,
+        path: '/dashboard/user/plans',
+    });
     return result[0];
 };
 const rejectTransaction = async (transactionId) => {
     const result = await prisma.transaction.update({
         where: { id: transactionId },
         data: { status: 'REJECTED' }
+    });
+    await NotificationService.createNotification({
+        userId: result.userId,
+        type: 'PAYMENT_REJECTED',
+        title: 'Payment Rejected',
+        message: `Your payment for ${result.packageName} was rejected. Please contact support.`,
+        path: '/dashboard/user/plans',
     });
     return result;
 };

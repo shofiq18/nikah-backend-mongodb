@@ -60,7 +60,59 @@ model User {
   // --- Photo Requests ---
   photoRequestsSent     PhotoRequest[] @relation("SentPhotoRequests")
   photoRequestsReceived PhotoRequest[] @relation("ReceivedPhotoRequests")
+
+  // --- Profile Views ---
+  profileViewsSent      ProfileView[] @relation("Viewer")
+  profileViewsReceived  ProfileView[] @relation("ProfileOwner")
+
+  // --- Notifications ---
+  notifications         Notification[]
 }
+
+model ProfileView {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  viewerId     String   @db.ObjectId
+  viewer       User     @relation("Viewer", fields: [viewerId], references: [id])
+  
+  targetUserId String   @db.ObjectId
+  targetUser   User     @relation("ProfileOwner", fields: [targetUserId], references: [id])
+  
+  lastViewedAt DateTime @default(now())
+
+  @@unique([viewerId, targetUserId])
+}
+
+
+model Notification {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type         NotificationType
+  title        String
+  message      String
+  path         String?   // Path to redirect to
+  isRead       Boolean  @default(false)
+  senderId     String?   @db.ObjectId
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum NotificationType {
+  INTEREST_RECEIVED
+  INTEREST_ACCEPTED
+  MESSAGE_RECEIVED
+  PHOTO_REQUEST_RECEIVED
+  PHOTO_REQUEST_ACCEPTED
+  PAYMENT_SUCCESS
+  PAYMENT_REJECTED
+  SHORTLIST_RECEIVED
+  PROFILE_VIEW_RECEIVED
+  ACCOUNT_ALERT
+}
+
 
 model Transaction {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId

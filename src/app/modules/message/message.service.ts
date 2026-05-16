@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { TMessage } from './message.interface.js';
+import { NotificationService } from '../notification/notification.service.js';
 
 const prisma = new PrismaClient();
 
@@ -34,6 +35,16 @@ const sendMessage = async (payload: TMessage) => {
       receiverId,
       content,
     }
+  });
+
+  // Create Notification
+  await NotificationService.createNotification({
+    userId: receiverId,
+    type: 'MESSAGE_RECEIVED',
+    title: sender.fullName,
+    message: 'sent you a new message.',
+    path: `/dashboard/user/inbox?id=${senderId}`,
+    senderId: senderId,
   });
 
   return result;

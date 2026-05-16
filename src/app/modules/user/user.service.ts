@@ -1,5 +1,6 @@
 import { InterestStatus, NidStatus, PrismaClient, UserStatus } from '@prisma/client';
 import { TLoginUser, TRegisterUser, TUpdateProfile } from './user.interface.js';
+import { NotificationService } from '../notification/notification.service.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import config from '../../../config/index.js';
@@ -202,12 +203,72 @@ const getProfile = async (requesterId: string | undefined, targetUserId: string)
   const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = user;
   const profile = userWithoutSensitiveData.profile;
 
-  // Check if unclocked or if requester is the owner
+  // Check if requester is the owner
   if (requesterId && requesterId === targetUserId) {
     return { ...userWithoutSensitiveData, isUnlocked: true };
   }
 
+  // Record Profile View and Create Notification if requester is different from owner
+  if (requesterId) {
+    const profileViewModel = (prisma as any).profileView || (prisma as any).ProfileView;
+    
+    if (profileViewModel) {
+      // 1. Check for existing view to see when they last visited
+      const existingView = await profileViewModel.findUnique({
+        where: {
+          viewerId_targetUserId: {
+            viewerId: requesterId,
+            targetUserId: targetUserId
+          }
+        }
+      });
+
+      const now = new Date();
+      const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
+      
+      // Determine if we should send a notification
+      // (Only if first time OR last view was more than 1 hour ago)
+      const shouldNotify = !existingView || (now.getTime() - new Date(existingView.lastViewedAt).getTime() > ONE_HOUR);
+
+      // 2. Record/Update the view
+      await profileViewModel.upsert({
+        where: {
+          viewerId_targetUserId: {
+            viewerId: requesterId,
+            targetUserId: targetUserId
+          }
+        },
+        update: {
+          lastViewedAt: now
+        },
+        create: {
+          viewerId: requesterId,
+          targetUserId: targetUserId,
+          lastViewedAt: now
+        }
+      });
+
+      // 3. Create Notification ONLY if shouldNotify is true
+      if (shouldNotify) {
+        const requester = await (prisma.user as any).findUnique({ where: { id: requesterId } });
+        if (requester) {
+          await NotificationService.createNotification({
+            userId: targetUserId,
+            type: 'PROFILE_VIEW_RECEIVED',
+            title: requester.fullName,
+            message: 'viewed your profile.',
+            path: `/dashboard/user/profile-details/${requesterId}`,
+            senderId: requesterId,
+          });
+        }
+      }
+    }
+  }
+
+
+
   let hasUnlocked = null;
+
   let isShortlisted = false;
   let interestStatus = null;
   let photoRequestStatus = null;
@@ -711,9 +772,22 @@ const toggleShortlist = async (userId: string, targetUserId: string) => {
         targetUserId
       }
     });
+
+    // Create Notification
+    const sender = await (prisma.user as any).findUnique({ where: { id: userId } });
+    await NotificationService.createNotification({
+      userId: targetUserId,
+      type: 'SHORTLIST_RECEIVED',
+      title: sender.fullName,
+      message: 'shortlisted your profile.',
+      path: `/dashboard/user/profile-details/${userId}`,
+      senderId: userId,
+    });
+
     return { message: 'Added to shortlist', isShortlisted: true };
   }
 };
+
 
 const getShortlistedProfiles = async (userId: string) => {
   const shortlistModel = (prisma as any).shortlist || (prisma as any).Shortlist;
@@ -805,6 +879,17 @@ const sendInterest = async (senderId: string, receiverId: string) => {
     }
   });
 
+  // Create Notification
+  const sender = await (prisma.user as any).findUnique({ where: { id: senderId } });
+  await NotificationService.createNotification({
+    userId: receiverId,
+    type: 'INTEREST_RECEIVED',
+    title: sender.fullName,
+    message: 'sent you an interest request.',
+    path: `/dashboard/user/profile-details/${senderId}`,
+    senderId: senderId,
+  });
+
   return result;
 };
 
@@ -823,6 +908,19 @@ const handleInterestResponse = async (userId: string, interestId: string, status
     where: { id: interestId },
     data: { status }
   });
+
+  // Create Notification if accepted
+  if (status === 'ACCEPTED') {
+    const user = await (prisma.user as any).findUnique({ where: { id: userId } });
+    await NotificationService.createNotification({
+      userId: interest.senderId,
+      type: 'INTEREST_ACCEPTED',
+      title: user.fullName,
+      message: 'accepted your interest request.',
+      path: `/dashboard/user/profile-details/${userId}`,
+      senderId: userId,
+    });
+  }
 
   return result;
 };

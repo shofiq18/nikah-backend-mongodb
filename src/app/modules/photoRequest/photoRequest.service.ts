@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { NotificationService } from '../notification/notification.service.js';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,17 @@ const sendPhotoRequest = async (requesterId: string, targetUserId: string) => {
     }
   });
 
+  // Create Notification
+  const requester = await (prisma.user as any).findUnique({ where: { id: requesterId } });
+  await NotificationService.createNotification({
+    userId: targetUserId,
+    type: 'PHOTO_REQUEST_RECEIVED',
+    title: requester.fullName,
+    message: 'requested to view your private photos.',
+    path: `/dashboard/user/profile-details/${requesterId}`,
+    senderId: requesterId,
+  });
+
   return result;
 };
 
@@ -44,6 +56,19 @@ const handlePhotoRequest = async (userId: string, requestId: string, status: 'AC
     where: { id: requestId },
     data: { status }
   });
+
+  // Create Notification if accepted
+  if (status === 'ACCEPTED') {
+    const user = await (prisma.user as any).findUnique({ where: { id: userId } });
+    await NotificationService.createNotification({
+      userId: request.requesterId,
+      type: 'PHOTO_REQUEST_ACCEPTED',
+      title: user.fullName,
+      message: 'accepted your photo request.',
+      path: `/dashboard/user/profile-details/${userId}`,
+      senderId: userId,
+    });
+  }
 
   return result;
 };
