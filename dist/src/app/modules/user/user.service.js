@@ -142,6 +142,9 @@ const updateProfile = async (userId, payload) => {
         }
         payload.age = age;
     }
+    if (payload.nidFront || payload.nidBack) {
+        payload.nidStatus = 'PENDING';
+    }
     const result = await prisma.profile.update({
         where: {
             userId,
@@ -461,7 +464,7 @@ const getAllUserProfiles = async (query, requesterId) => {
             include: { profile: true }
         });
         if (requester?.profile?.gender) {
-            oppositeGender = requester.profile.gender === 'Male' ? 'Female' : 'Male';
+            oppositeGender = requester.profile.gender.toLowerCase() === 'male' ? 'Female' : 'Male';
         }
     }
     if (searchTerm) {
@@ -477,10 +480,10 @@ const getAllUserProfiles = async (query, requesterId) => {
     }
     const profileFilters = {};
     if (gender) {
-        profileFilters.gender = gender;
+        profileFilters.gender = { equals: gender, mode: 'insensitive' };
     }
     else if (oppositeGender) {
-        profileFilters.gender = oppositeGender;
+        profileFilters.gender = { equals: oppositeGender, mode: 'insensitive' };
     }
     if (maritalStatus)
         profileFilters.maritalStatus = maritalStatus;
@@ -930,10 +933,28 @@ const getPremiumMembers = async (params, requesterId) => {
         status: 'Active',
         planType: { in: ['GOLD', 'DIAMOND', 'PLATINUM'] }
     };
+    let oppositeGender;
+    if (requesterId && !gender) {
+        const requester = await prisma.user.findUnique({
+            where: { id: requesterId },
+            include: { profile: true }
+        });
+        if (requester?.profile?.gender) {
+            oppositeGender = requester.profile.gender.toLowerCase() === 'male' ? 'Female' : 'Male';
+        }
+    }
     if (gender) {
         where.profile = {
             gender: {
                 equals: gender,
+                mode: 'insensitive'
+            }
+        };
+    }
+    else if (oppositeGender) {
+        where.profile = {
+            gender: {
+                equals: oppositeGender,
                 mode: 'insensitive'
             }
         };

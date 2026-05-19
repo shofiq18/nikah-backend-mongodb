@@ -182,6 +182,11 @@ const updateProfile = async (userId: string, payload: TUpdateProfile) => {
     payload.age = age;
   }
 
+  // Automatically mark NID as PENDING verification if front or back is updated
+  if (payload.nidFront || payload.nidBack) {
+    (payload as any).nidStatus = 'PENDING';
+  }
+
   const result = await prisma.profile.update({
     where: {
       userId,
@@ -593,7 +598,7 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
       include: { profile: true }
     });
     if (requester?.profile?.gender) {
-      oppositeGender = requester.profile.gender === 'Male' ? 'Female' : 'Male';
+      oppositeGender = requester.profile.gender.toLowerCase() === 'male' ? 'Female' : 'Male';
     }
   }
 
@@ -613,9 +618,9 @@ const getAllUserProfiles = async (query: Record<string, any>, requesterId?: stri
   // Profile specific filters
   const profileFilters: any = {};
   if (gender) {
-    profileFilters.gender = gender;
+    profileFilters.gender = { equals: gender, mode: 'insensitive' };
   } else if (oppositeGender) {
-    profileFilters.gender = oppositeGender;
+    profileFilters.gender = { equals: oppositeGender, mode: 'insensitive' };
   }
 
   if (maritalStatus) profileFilters.maritalStatus = maritalStatus;
@@ -1153,10 +1158,28 @@ const getPremiumMembers = async (params: any, requesterId: string | undefined) =
     planType: { in: ['GOLD', 'DIAMOND', 'PLATINUM'] }
   };
 
+  let oppositeGender: string | undefined;
+  if (requesterId && !gender) {
+    const requester = await (prisma.user as any).findUnique({
+      where: { id: requesterId },
+      include: { profile: true }
+    });
+    if (requester?.profile?.gender) {
+      oppositeGender = requester.profile.gender.toLowerCase() === 'male' ? 'Female' : 'Male';
+    }
+  }
+
   if (gender) {
     where.profile = {
       gender: {
         equals: gender,
+        mode: 'insensitive'
+      }
+    };
+  } else if (oppositeGender) {
+    where.profile = {
+      gender: {
+        equals: oppositeGender,
         mode: 'insensitive'
       }
     };
