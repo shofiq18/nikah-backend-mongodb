@@ -9,6 +9,7 @@ router.post('/resend-otp', UserController.resendOtp);
 router.get('/me', auth('USER', 'ADMIN', 'MODERATOR'), UserController.getMe);
 router.post('/logout', UserController.logout);
 router.patch('/profile', auth('USER'), UserController.updateProfile);
+router.get('/showcase', UserController.getShowcaseProfiles);
 router.get('/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
 router.get('/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 router.get('/all-users', auth('ADMIN'), UserController.getAllUsers);

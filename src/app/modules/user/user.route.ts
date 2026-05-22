@@ -14,6 +14,7 @@ router.post('/logout', UserController.logout);
 
 // User Profile routes (Mounted at /api/v1/users)
 router.patch('/profile', auth('USER'), UserController.updateProfile);
+router.get('/showcase', UserController.getShowcaseProfiles);           // PUBLIC — landing page
 router.get('/:id/profile', auth('USER', 'ADMIN'), UserController.getProfile);
 router.get('/profiles', auth('USER', 'ADMIN'), UserController.getAllUserProfiles);
 

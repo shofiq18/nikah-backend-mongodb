@@ -171,6 +171,21 @@ const getAllUserProfiles = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Public: no auth required — used by the landing page showcase
+const getShowcaseProfiles = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUserProfiles(
+    { limit: '60', ...req.query },
+    undefined, // no requester — public
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Showcase profiles fetched successfully',
+    data: result,
+  });
+});
+
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getAllUsers(req.query);
 
@@ -361,6 +376,7 @@ export const UserController = {
   updateProfile,
   getProfile,
   getAllUserProfiles,
+  getShowcaseProfiles,
   getAllUsers,
   updateNidStatus,
   blockUser,

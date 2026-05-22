@@ -137,6 +137,15 @@ const getAllUserProfiles = catchAsync(async (req, res) => {
         data: result,
     });
 });
+const getShowcaseProfiles = catchAsync(async (req, res) => {
+    const result = await UserService.getAllUserProfiles({ limit: '60', ...req.query }, undefined);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Showcase profiles fetched successfully',
+        data: result,
+    });
+});
 const getAllUsers = catchAsync(async (req, res) => {
     const result = await UserService.getAllUsers(req.query);
     sendResponse(res, {
@@ -302,6 +311,7 @@ export const UserController = {
     updateProfile,
     getProfile,
     getAllUserProfiles,
+    getShowcaseProfiles,
     getAllUsers,
     updateNidStatus,
     blockUser,
