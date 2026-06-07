@@ -11,6 +11,19 @@ const globalErrorHandler = (err: any, req: Request, res: Response, next: NextFun
         statusCode = httpStatus.UNAUTHORIZED;
     }
 
+    // Handle Prisma unique constraint error
+    if (err.code === 'P2002') {
+        statusCode = httpStatus.BAD_REQUEST;
+        const target = err.meta?.target;
+        if (typeof target === 'string' && target.includes('email')) {
+            message = "An account with this email already exists.";
+        } else if (Array.isArray(target) && target.includes('email')) {
+            message = "An account with this email already exists.";
+        } else {
+            message = "A record with this value already exists.";
+        }
+    }
+
     // Handle Zod validation error specifically
     if (err.name === 'ZodError' || err.issues) {
         statusCode = httpStatus.BAD_REQUEST;

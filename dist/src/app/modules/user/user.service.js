@@ -6,8 +6,27 @@ import config from '../../../config/index.js';
 import { sendEmail } from '../../utils/sendEmail.js';
 import { QueryHelpers } from '../../utils/queryHelpers.js';
 import { calculateMatchScore } from '../../utils/match-logic.js';
+import { getOtpEmailTemplate } from '../../utils/emailTemplates.js';
 const prisma = new PrismaClient();
 const registerUser = async (payload) => {
+    const existingUser = await prisma.user.findUnique({
+        where: { email: payload.email },
+    });
+    if (existingUser) {
+        if (existingUser.status === 'Deleted') {
+            await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                    email: `${existingUser.email}.deleted.${Date.now()}`
+                }
+            });
+        }
+        else {
+            const error = new Error('An account with this email already exists.');
+            error.statusCode = 400;
+            throw error;
+        }
+    }
     const hashedPassword = payload.password ? await bcrypt.hash(payload.password, 12) : '';
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
@@ -31,11 +50,15 @@ const registerUser = async (payload) => {
             profile: true
         }
     });
-    await sendEmail(payload.email, `<div>
-      <h1>Welcome to ZawajBD</h1>
-      <p>Your verification OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-    </div>`);
+    try {
+        await sendEmail(payload.email, getOtpEmailTemplate(payload.fullName, otp, 'register'));
+    }
+    catch (emailError) {
+        await prisma.user.delete({
+            where: { id: result.id }
+        }).catch(() => { });
+        throw emailError;
+    }
     const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result;
     const jwtPayload = {
         email: result.email,
@@ -360,11 +383,7 @@ const resendOtp = async (email) => {
             verificationOtpExpires: otpExpires,
         },
     });
-    await sendEmail(email, `<div>
-      <h1>New Verification OTP for ZawajBD</h1>
-      <p>Your new verification OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-    </div>`);
+    await sendEmail(email, getOtpEmailTemplate(user.fullName, otp, 'resend'));
     return { message: 'OTP resent successfully' };
 };
 const getAllUsers = async (query) => {
@@ -429,9 +448,16 @@ const blockUser = async (id, status) => {
     });
 };
 const deleteUser = async (id) => {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+        throw new Error('User not found');
+    }
     return await prisma.user.update({
         where: { id },
-        data: { status: 'Deleted' }
+        data: {
+            status: 'Deleted',
+            email: `${user.email}.deleted.${Date.now()}`
+        }
     });
 };
 const getAllUserProfiles = async (query, requesterId) => {

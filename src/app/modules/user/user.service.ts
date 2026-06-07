@@ -7,10 +7,32 @@ import config from '../../../config/index.js';
 import { sendEmail } from '../../utils/sendEmail.js';
 import { QueryHelpers } from '../../utils/queryHelpers.js';
 import { calculateMatchScore } from '../../utils/match-logic.js';
+import { getOtpEmailTemplate } from '../../utils/emailTemplates.js';
 
 const prisma = new PrismaClient();
 
 const registerUser = async (payload: TRegisterUser) => {
+  // Check if user already exists
+  const existingUser = await (prisma.user as any).findUnique({
+    where: { email: payload.email },
+  });
+
+  if (existingUser) {
+    if (existingUser.status === 'Deleted') {
+      // Release the email from the soft-deleted user by renaming it
+      await (prisma.user as any).update({
+        where: { id: existingUser.id },
+        data: {
+          email: `${existingUser.email}.deleted.${Date.now()}`
+        }
+      });
+    } else {
+      const error = new Error('An account with this email already exists.');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+  }
+
   // Hash password
   const hashedPassword = payload.password ? await bcrypt.hash(payload.password, 12) : '';
 
@@ -42,14 +64,18 @@ const registerUser = async (payload: TRegisterUser) => {
   });
 
   // Send Email with OTP
-  await sendEmail(
-    payload.email,
-    `<div>
-      <h1>Welcome to ZawajBD</h1>
-      <p>Your verification OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-    </div>`
-  );
+  try {
+    await sendEmail(
+      payload.email,
+      getOtpEmailTemplate(payload.fullName, otp, 'register')
+    );
+  } catch (emailError) {
+    // Cleanup the created user if email sending fails to prevent half-created accounts
+    await (prisma.user as any).delete({
+      where: { id: result.id }
+    }).catch(() => {});
+    throw emailError;
+  }
 
   // Omit sensitive data from result
   const { password, verificationOtp, verificationOtpExpires, ...userWithoutSensitiveData } = result as any;
@@ -463,11 +489,7 @@ const resendOtp = async (email: string) => {
 
   await sendEmail(
     email,
-    `<div>
-      <h1>New Verification OTP for ZawajBD</h1>
-      <p>Your new verification OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-    </div>`
+    getOtpEmailTemplate(user.fullName, otp, 'resend')
   );
 
   return { message: 'OTP resent successfully' };
@@ -541,9 +563,17 @@ const blockUser = async (id: string, status: UserStatus) => {
 };
 
 const deleteUser = async (id: string) => {
+  const user = await (prisma.user as any).findUnique({ where: { id } });
+  if (!user) {
+    throw new Error('User not found');
+  }
+
   return await (prisma.user as any).update({
     where: { id },
-    data: { status: 'Deleted' }
+    data: {
+      status: 'Deleted',
+      email: `${user.email}.deleted.${Date.now()}`
+    }
   });
 };
 
