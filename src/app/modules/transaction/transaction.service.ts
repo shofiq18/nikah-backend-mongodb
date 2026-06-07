@@ -63,10 +63,8 @@ const createTransaction = async (payload: TTransaction) => {
 ━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 
-  // Asynchronously send telegram message to avoid delaying HTTP response
-  sendTelegramMessage(message).catch((error) => {
-    console.error('[Telegram] Failed to send payment notification:', error);
-  });
+  // Await the telegram message to ensure Vercel serverless functions do not freeze/terminate before the request completes
+  await sendTelegramMessage(message);
 
   return result;
 };

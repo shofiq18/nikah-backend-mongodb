@@ -51,9 +51,7 @@ const createTransaction = async (payload) => {
 🕒 <b>Submitted At:</b> ${new Date(result.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 `;
-    sendTelegramMessage(message).catch((error) => {
-        console.error('[Telegram] Failed to send payment notification:', error);
-    });
+    await sendTelegramMessage(message);
     return result;
 };
 const approveTransaction = async (transactionId) => {
