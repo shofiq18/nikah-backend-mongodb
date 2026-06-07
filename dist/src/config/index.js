@@ -16,5 +16,7 @@ export default {
     cloudinary_name: process.env.CLOUDINARY_NAME,
     cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
     cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
+    telegram_bot_token: process.env.TELEGRAM_BOT_TOKEN,
+    telegram_chat_id: process.env.TELEGRAM_CHAT_ID,
 };
 //# sourceMappingURL=index.js.map

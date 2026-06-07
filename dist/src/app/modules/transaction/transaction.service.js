@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { NotificationService } from '../notification/notification.service.js';
+import { sendTelegramMessage } from '../../utils/sendTelegramMessage.js';
 const prisma = new PrismaClient();
 const SUBSCRIPTION_PLANS = {
     'Gold (3 Months)': { durationMonths: 3, contactLimit: 40, type: 'GOLD' },
@@ -18,8 +19,40 @@ const TOKEN_PACKS = {
     '15 Tokens': { tokens: 15 },
 };
 const createTransaction = async (payload) => {
+    const existingTransaction = await prisma.transaction.findUnique({
+        where: { trxId: payload.trxId }
+    });
+    if (existingTransaction) {
+        throw new Error('Transaction ID (TrxID) already exists. Please use a unique one.');
+    }
     const result = await prisma.transaction.create({
-        data: payload
+        data: payload,
+        include: {
+            user: true
+        }
+    });
+    const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 <b>NEW MATRIMONY PAYMENT SUBMITTED</b>
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 <b>User Info:</b>
+• <b>Name:</b> ${result.user?.fullName || 'N/A'}
+• <b>Email:</b> ${result.user?.email || 'N/A'}
+• <b>Member ID:</b> ${result.user?.memberId || 'N/A'}
+• <b>User ID:</b> <code>${result.userId}</code>
+
+💳 <b>Payment Details:</b>
+• <b>Package:</b> ${result.packageName} (${result.productType})
+• <b>Amount:</b> ${result.amount} BDT
+• <b>Sender Number:</b> ${result.senderNumber}
+• <b>TrxID:</b> <code>${result.trxId}</code>
+
+🕒 <b>Submitted At:</b> ${new Date(result.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}
+━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+    sendTelegramMessage(message).catch((error) => {
+        console.error('[Telegram] Failed to send payment notification:', error);
     });
     return result;
 };
