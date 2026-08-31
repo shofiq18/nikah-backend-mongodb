@@ -930,6 +930,7 @@ const getMatches = async (userId) => {
             highestEducation: candidate.profile.highestEducation,
             height: candidate.profile.height,
             photo: candidate.profile.photos?.[0] || null,
+            photoVisibility: candidate.profile.photoVisibility || 'PUBLIC',
             isShortlisted: shortlistedIds.includes(candidate.id),
             interestStatus: interestStatusMap[candidate.id] || null,
             photoRequestStatus: photoRequestStatusMap[candidate.id] || null,
