@@ -208,6 +208,12 @@ const updateProfile = async (userId: string, payload: TUpdateProfile) => {
     payload.age = age;
   }
 
+  // Normalize partnerReligions if sent as array from frontend
+  if (Array.isArray((payload as any).partnerReligions)) {
+    const religions = (payload as any).partnerReligions.filter(Boolean);
+    (payload as any).partnerReligions = religions.length > 0 ? religions[0] : null;
+  }
+
   // Automatically mark NID as PENDING verification if front or back is updated
   if (payload.nidFront || payload.nidBack) {
     (payload as any).nidStatus = 'PENDING';
