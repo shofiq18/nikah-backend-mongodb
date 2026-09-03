@@ -165,6 +165,10 @@ const updateProfile = async (userId, payload) => {
         }
         payload.age = age;
     }
+    if (Array.isArray(payload.partnerReligions)) {
+        const religions = payload.partnerReligions.filter(Boolean);
+        payload.partnerReligions = religions.length > 0 ? religions[0] : null;
+    }
     if (payload.nidFront || payload.nidBack) {
         payload.nidStatus = 'PENDING';
     }
