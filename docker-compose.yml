@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nikah-backend
+    container_name: backend-api-service
     restart: always
     ports:
       - "5500:5500"
