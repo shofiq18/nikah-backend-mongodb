@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend-api-service
+    container_name: z_backend_service
     restart: always
     ports:
       - "5500:5500"
