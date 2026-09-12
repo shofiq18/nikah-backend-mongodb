@@ -6,9 +6,9 @@ services:
     container_name: nikah-backend
     restart: always
     ports:
-      - " 5500:5500\
- env_file:
- - .env
- environment:
- - PORT=5500
- - NODE_ENV=production
+      - "5500:5500"
+    env_file:
+      - .env
+    environment:
+      - PORT=5500
+      - NODE_ENV=production

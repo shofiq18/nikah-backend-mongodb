@@ -28,4 +28,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 5500
 
-CMD [" pnpm\, \start\]
+CMD ["node", "dist/server.js"]
