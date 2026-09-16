@@ -9,9 +9,17 @@ import { TransactionRoutes } from "./app/modules/transaction/transaction.route.j
 import { MessageRoutes } from "./app/modules/message/message.route.js";
 import { PhotoRequestRoutes } from "./app/modules/photoRequest/photoRequest.route.js";
 import { NotificationRoutes } from "./app/modules/notification/notification.route.js";
+import { AnalyticsRoutes } from "./app/modules/analytics/analytics.route.js";
 const app = express();
 app.use(cors({
-    origin: ["https://zawajbd.vercel.app", "http://localhost:3000", "http://localhost:5173"],
+    origin: [
+        "https://zawajbd.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:3002",
+        "http://localhost:5173",
+        "http://193.203.165.140:3002",
+        "http://193.203.165.140:3000"
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
 }));
@@ -32,6 +40,7 @@ app.use("/api/v1/notifications", NotificationRoutes);
 app.use("/api/v1/transactions", TransactionRoutes);
 app.use("/api/v1/messages", MessageRoutes);
 app.use("/api/v1/photo-requests", PhotoRequestRoutes);
+app.use("/api/v1/analytics", AnalyticsRoutes);
 app.use(globalErrorHandler);
 app.use(notFound);
 export default app;

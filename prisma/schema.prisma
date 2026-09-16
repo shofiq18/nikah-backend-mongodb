@@ -337,3 +337,15 @@ enum NidStatus {
   APPROVED
   REJECTED
 }
+
+model VisitorLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  referrer   String
+  deviceType String?
+  path       String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([referrer])
+}
